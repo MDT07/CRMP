@@ -48,6 +48,11 @@ export interface DashboardMetrics {
   conversion_rate: number;
 }
 
+export interface AssistantMessageResponse {
+  content: string;
+  mode: string;
+}
+
 export interface GrowthPoint {
   label: string;
   revenue: number;
@@ -933,6 +938,13 @@ export async function createDeal(payload: DealCreatePayload) {
   });
 }
 
+export async function updateDeal(dealId: string, payload: Partial<Deal>) {
+  return requestWithSession<Deal>(`/deals/${dealId}`, {
+    method: "PATCH",
+    body: payload,
+  });
+}
+
 export async function updateDealStage(dealId: string, payload: DealStageUpdatePayload) {
   return requestWithSession<Deal>(`/deals/${dealId}/stage`, {
     method: "POST",
@@ -1096,6 +1108,34 @@ export async function rejectAiProposal(proposalId: string, reason?: string) {
   });
 }
 
+export async function sendNemotronChatMessage(message: string) {
+  // For guest mode, make direct request without session
+  const hasBody = true;
+  const response = await fetch(`${getApiBaseUrl()}/nematron/chat`, {
+    method: "POST",
+    headers: {
+      ...(hasBody ? { "Content-Type": "application/json" } : {}),
+      "X-Client-Trace-Id": buildClientTraceId(),
+    },
+    body: hasBody ? JSON.stringify({ message }) : undefined,
+  });
+
+  const contentType = response.headers.get("content-type") ?? "";
+  const payload = contentType.includes("application/json")
+    ? await response.json()
+    : await response.text();
+
+  if (!response.ok) {
+    const detail =
+      typeof payload === "object" && payload !== null && "detail" in payload
+        ? String(payload.detail)
+        : response.statusText || "Request failed.";
+    throw new CrmApiError(detail, response.status);
+  }
+
+  return payload as AssistantMessageResponse;
+}
+
 export async function bulkDecideAiProposals(payload: ProposalBulkDecisionPayload) {
   return requestWithSession<ProposalBulkDecisionResponse>("/ai/proposals/bulk-decision", {
     method: "POST",
@@ -1141,4 +1181,445 @@ export async function fetchAgentRuns(limit = 25) {
 
 export async function fetchAgentRun(runId: string) {
   return requestWithSession<AgentRunDetailResponse>(`/ai/agent/runs/${runId}`);
+}
+
+// Email API
+
+export interface EmailAccount {
+  id: string;
+  email_address: string;
+  provider: string;
+  display_name?: string;
+  sync_enabled: boolean;
+  last_sync_at?: string;
+  created_at: string;
+}
+
+export interface EmailAccountUpdatePayload {
+  sync_enabled?: boolean;
+  display_name?: string;
+}
+
+export interface EmailMessage {
+  id: string;
+  account_id: string;
+  subject: string;
+  from_email: string;
+  from_name?: string;
+  to_emails: string[];
+  body_text?: string;
+  body_html?: string;
+  is_read: boolean;
+  is_sent: boolean;
+  sent_at?: string;
+  received_at?: string;
+}
+
+export interface EmailThread {
+  id: string;
+  subject: string;
+  participants: string[];
+  message_count: number;
+  last_message_at: string;
+}
+
+export async function fetchEmailAccounts() {
+  return requestWithSession<{ accounts: EmailAccount[] }>("/email/accounts");
+}
+
+export async function connectGmailAccount() {
+  return requestWithSession<{ auth_url: string }>("/email/connect/gmail", {
+    method: "POST",
+  });
+}
+
+export async function updateEmailAccount(accountId: string, payload: EmailAccountUpdatePayload) {
+  return requestWithSession<EmailAccount>(`/email/accounts/${accountId}`, {
+    method: "PATCH",
+    body: payload,
+  });
+}
+
+export async function deleteEmailAccount(accountId: string) {
+  return requestWithSession<void>(`/email/accounts/${accountId}`, {
+    method: "DELETE",
+  });
+}
+
+export async function syncEmails(accountId?: string) {
+  return requestWithSession<{ synced: number }>("/email/sync", {
+    method: "POST",
+    body: accountId ? { account_id: accountId } : {},
+  });
+}
+
+export async function fetchEmailMessages(params?: {
+  account_id?: string;
+  contact_id?: string;
+  is_read?: boolean;
+  limit?: number;
+  offset?: number;
+}) {
+  // Convert boolean to string for query params
+  const queryParams: Record<string, string | number | undefined> = {};
+  if (params) {
+    if (params.account_id) queryParams.account_id = params.account_id;
+    if (params.contact_id) queryParams.contact_id = params.contact_id;
+    if (params.is_read !== undefined) queryParams.is_read = params.is_read ? "true" : "false";
+    if (params.limit !== undefined) queryParams.limit = params.limit;
+    if (params.offset !== undefined) queryParams.offset = params.offset;
+  }
+  return requestWithSession<{ messages: EmailMessage[]; next_cursor?: string }>(
+    `/email/messages${buildQuery(queryParams)}`,
+  );
+}
+
+export async function fetchEmailMessage(messageId: string) {
+  return requestWithSession<EmailMessage>(`/email/messages/${messageId}`);
+}
+
+export async function updateEmailMessage(
+  messageId: string,
+  payload: { is_read?: boolean; is_archived?: boolean },
+) {
+  return requestWithSession<EmailMessage>(`/email/messages/${messageId}`, {
+    method: "PATCH",
+    body: payload,
+  });
+}
+
+export async function fetchEmailThreads(params?: {
+  account_id?: string;
+  contact_id?: string;
+  deal_id?: string;
+  limit?: number;
+  offset?: number;
+}) {
+  return requestWithSession<{ threads: EmailThread[]; next_cursor?: string }>(
+    `/email/threads${buildQuery(params)}`,
+  );
+}
+
+export async function fetchEmailThread(threadId: string) {
+  return requestWithSession<EmailThread & { messages: EmailMessage[] }>(
+    `/email/threads/${threadId}`,
+  );
+}
+
+// Multi-Agent System API
+
+export interface AgentInfo {
+  agent_id: string;
+  role: string;
+  status: string;
+  capabilities: {
+    name: string;
+    description: string;
+  }[];
+}
+
+export interface MultiAgentQueryResponse {
+  success: boolean;
+  query: string;
+  response: Record<string, unknown>;
+  agent: {
+    id: string;
+    role: string;
+  };
+  execution_time_ms: number;
+  error?: string;
+}
+
+export interface MultiAgentChatResponse {
+  success: boolean;
+  message: string;
+  response?: string;
+  agent_used: {
+    id: string;
+    role: string;
+  };
+  suggested_actions: {
+    type: string;
+    description: string;
+  }[];
+  execution_time_ms: number;
+}
+
+export interface MultiAgentStatus {
+  orchestrator_status: {
+    agents: Record<string, {
+      role: string;
+      status: string;
+      capabilities: string[];
+      messages: number;
+    }>;
+    active_workflows: number;
+    context_keys: string[];
+  };
+  available_workflows: {
+    name: string;
+    description: string;
+    steps_count: number;
+  }[];
+}
+
+export interface WorkflowResult {
+  success: boolean;
+  execution_id: string;
+  workflow_name: string;
+  status: string;
+  steps_completed: string[];
+  steps_failed: string[];
+  results: Record<string, {
+    success: boolean;
+    agent_id: string;
+    output: Record<string, unknown>;
+  }>;
+  shared_data: Record<string, unknown>;
+  started_at: string;
+  completed_at?: string;
+  error?: string;
+}
+
+export async function fetchMultiAgentStatus(): Promise<MultiAgentStatus> {
+  return requestWithSession<MultiAgentStatus>("/agents/status");
+}
+
+export async function fetchAvailableAgents(): Promise<AgentInfo[]> {
+  return requestWithSession<AgentInfo[]>("/agents/list");
+}
+
+export async function queryMultiAgent(
+  query: string,
+  params?: Record<string, unknown>,
+): Promise<MultiAgentQueryResponse> {
+  return requestWithSession<MultiAgentQueryResponse>("/agents/query", {
+    method: "POST",
+    body: { query, params },
+  });
+}
+
+export async function chatWithMultiAgent(
+  message: string,
+  context?: Record<string, unknown>,
+): Promise<MultiAgentChatResponse> {
+  return requestWithSession<MultiAgentChatResponse>("/agents/chat", {
+    method: "POST",
+    body: { message, context },
+  });
+}
+
+export async function executeWithAgent(
+  agentId: string,
+  taskType: string,
+  params: Record<string, unknown>,
+): Promise<MultiAgentQueryResponse> {
+  return requestWithSession<MultiAgentQueryResponse>(`/agents/execute/${agentId}`, {
+    method: "POST",
+    body: { task_type: taskType, params },
+  });
+}
+
+export async function runAgentWorkflow(
+  workflowName: string,
+  params: Record<string, unknown>,
+): Promise<WorkflowResult> {
+  return requestWithSession<WorkflowResult>(`/agents/workflows/${workflowName}/run`, {
+    method: "POST",
+    body: { params },
+  });
+}
+
+export async function analyzeContactWithAgent(contactId: string): Promise<MultiAgentQueryResponse> {
+  return requestWithSession<MultiAgentQueryResponse>(`/agents/analyze/contact/${contactId}`, {
+    method: "POST",
+  });
+}
+
+export async function analyzeDealWithAgent(dealId: string): Promise<MultiAgentQueryResponse> {
+  return requestWithSession<MultiAgentQueryResponse>(`/agents/analyze/deal/${dealId}`, {
+    method: "POST",
+  });
+}
+
+export async function analyzePipelineWithAgent(): Promise<MultiAgentQueryResponse> {
+  return requestWithSession<MultiAgentQueryResponse>("/agents/analyze/pipeline", {
+    method: "POST",
+  });
+}
+
+export async function prioritizeTasksWithAgent(): Promise<MultiAgentQueryResponse> {
+  return requestWithSession<MultiAgentQueryResponse>("/agents/tasks/prioritize", {
+    method: "POST",
+  });
+}
+
+export async function draftEmailWithAgent(
+  messageId: string,
+  tone: string = "professional",
+): Promise<MultiAgentQueryResponse> {
+  return requestWithSession<MultiAgentQueryResponse>(
+    `/agents/email/draft?message_id=${messageId}&tone=${tone}`,
+    { method: "POST" },
+  );
+}
+
+export async function runComprehensiveDealAnalysis(dealId: string): Promise<WorkflowResult> {
+  return requestWithSession<WorkflowResult>(`/agents/workflows/deal-analysis/${dealId}`, {
+    method: "POST",
+  });
+}
+
+export async function runMorningBriefing(): Promise<WorkflowResult> {
+  return requestWithSession<WorkflowResult>("/agents/workflows/morning-briefing", {
+    method: "POST",
+  });
+}
+
+// Agent Swarm System API
+
+export interface SwarmTaskRequest {
+  task_type: string;
+  description: string;
+  priority?: "critical" | "high" | "normal" | "low" | "background";
+  required_capabilities?: string[];
+  optimal_swarm_size?: number;
+  input_payload?: Record<string, unknown>;
+  context_location?: string;
+  timeout_seconds?: number;
+}
+
+export interface SwarmTaskResponse {
+  execution_id: string;
+  status: string;
+  message: string;
+  participating_agents: string[];
+}
+
+export interface SwarmMetrics {
+  active_agents: number;
+  idle_agents: number;
+  executing_agents: number;
+  queued_tasks: number;
+  completed_tasks_24h: number;
+  failed_tasks_24h: number;
+  avg_task_completion_time_ms: number;
+  success_rate: number;
+  pheromone_trails_active: number;
+  conflict_rate: number;
+  learning_velocity: number;
+}
+
+export interface SwarmAgentInfo {
+  agent_id: string;
+  agent_type: string;
+  agent_class: string;
+  status: string;
+  capabilities: string[];
+  tasks_completed: number;
+  tasks_failed: number;
+  success_rate: number;
+  avg_confidence: number;
+  has_active_task: boolean;
+}
+
+export interface SwarmStatusResponse {
+  metrics: SwarmMetrics;
+  agents: Record<string, SwarmAgentInfo>;
+  registered_agent_classes: string[];
+}
+
+export interface PheromoneTrail {
+  location: string;
+  data_type: string;
+  strength: number;
+  hint?: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
+}
+
+export async function initializeSwarm(): Promise<{
+  status: string;
+  agent_count: number;
+  agents: Array<{ id: string; type: string; class: string }>;
+}> {
+  return requestWithSession("/swarm/initialize", {
+    method: "POST",
+  });
+}
+
+export async function shutdownSwarm(): Promise<{ status: string; message: string }> {
+  return requestWithSession("/swarm/shutdown", {
+    method: "POST",
+  });
+}
+
+export async function getSwarmStatus(): Promise<SwarmStatusResponse> {
+  return requestWithSession<SwarmStatusResponse>("/swarm/status");
+}
+
+export async function submitSwarmTask(request: SwarmTaskRequest): Promise<SwarmTaskResponse> {
+  return requestWithSession<SwarmTaskResponse>("/swarm/tasks", {
+    method: "POST",
+    body: request,
+  });
+}
+
+export async function listSwarmAgents(
+  agentClass?: string,
+  status?: string,
+): Promise<{ agents: SwarmAgentInfo[]; total_count: number; by_class: Record<string, number> }> {
+  const params: Record<string, string> = {};
+  if (agentClass) params.agent_class = agentClass;
+  if (status) params.status = status;
+
+  return requestWithSession(`/swarm/agents${buildQuery(params)}`);
+}
+
+export async function getSwarmAgentDetails(agentId: string): Promise<
+  SwarmAgentInfo & {
+    current_task: string | null;
+    executed_tasks_count: number;
+  }
+> {
+  return requestWithSession(`/swarm/agents/${agentId}`);
+}
+
+export async function getPheromoneTrails(location?: string): Promise<PheromoneTrail[]> {
+  const params = location ? { location } : undefined;
+  return requestWithSession<PheromoneTrail[]>(`/swarm/pheromones${buildQuery(params)}`);
+}
+
+export async function emergencyStopSwarm(): Promise<{ status: string; message: string }> {
+  return requestWithSession("/swarm/emergency-stop", {
+    method: "POST",
+  });
+}
+
+// Convenience methods for common swarm tasks
+
+export async function analyzeDealWithSwarm(dealId: string): Promise<SwarmTaskResponse> {
+  return requestWithSession<SwarmTaskResponse>(`/swarm/tasks/analyze-deal/${dealId}`, {
+    method: "POST",
+  });
+}
+
+export async function draftReplyWithSwarm(
+  emailId: string,
+  tone: string = "professional",
+): Promise<SwarmTaskResponse> {
+  return requestWithSession<SwarmTaskResponse>(
+    `/swarm/tasks/draft-reply?email_id=${emailId}&tone=${tone}`,
+    { method: "POST" },
+  );
+}
+
+export async function createFollowUpTaskWithSwarm(
+  entityType: "deal" | "contact" | "email",
+  entityId: string,
+): Promise<SwarmTaskResponse> {
+  return requestWithSession<SwarmTaskResponse>(
+    `/swarm/tasks/create-follow-up?entity_type=${entityType}&entity_id=${entityId}`,
+    { method: "POST" },
+  );
 }

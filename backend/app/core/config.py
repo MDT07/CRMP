@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     allowed_cors_origins: Annotated[list[str], NoDecode] = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5174",
     ]
     session_cookie_name: str = "crmp_session"
     session_cookie_secure: bool = False
@@ -34,6 +36,7 @@ class Settings(BaseSettings):
     kafka_topic_events: str = "crmp.events"
     llm_base_url: str = "http://127.0.0.1:1234/v1"
     llm_api_key: str = ""
+    lm_api_token: str = ""
     llm_model: str = "local-model"
     llm_model_chat: str = "local-model"
     llm_model_agent: str = "local-model"
@@ -42,6 +45,17 @@ class Settings(BaseSettings):
     local_ai_only: bool = True
     ai_cache_ttl_seconds: int = 900
     rate_limit_ai_requests_per_minute: int = 30
+
+    # Nemotron-3-Nano-4B Configuration
+    nemotron_enabled: bool = True
+    nemotron_model_id: str = "nvidia/nemotron-3-nano-4b"
+    nemotron_temperature: float = 0.3
+    nemotron_max_tokens: int = 1024
+    nemotron_top_p: float = 0.9
+    nemotron_top_k: int = 40
+    nemotron_repetition_penalty: float = 1.1
+    nemotron_context_window: int = 4096
+    nemotron_fallback_on_error: bool = True
     api_key_rate_limit_requests_per_minute: int = 240
     api_key_invalid_attempts_per_minute: int = 60
     event_worker_enabled: bool = True
@@ -53,6 +67,16 @@ class Settings(BaseSettings):
     project_assistant_root: str = str(BACKEND_DIR.parent)
     project_assistant_max_files: int = 3000
 
+    # Email OAuth Settings
+    gmail_client_id: str = ""
+    gmail_client_secret: str = ""
+    gmail_redirect_uri: str = "http://localhost:5173/email/oauth/callback"
+    outlook_client_id: str = ""
+    outlook_client_secret: str = ""
+    outlook_redirect_uri: str = "http://localhost:5173/email/oauth/callback"
+    oauth_state_secret: str = "replace-with-random-secret-for-oauth-state"
+    frontend_url: str = "http://localhost:5173"
+
     model_config = SettingsConfigDict(
         env_file=str(BACKEND_DIR / ".env"),
         env_file_encoding="utf-8",
@@ -62,9 +86,7 @@ class Settings(BaseSettings):
 
     @field_validator("allowed_cors_origins", mode="before")
     @classmethod
-    def parse_cors_origins(
-        cls, value: str | list[str] | tuple[str, ...] | None
-    ) -> list[str]:
+    def parse_cors_origins(cls, value: str | list[str] | tuple[str, ...] | None) -> list[str]:
         if isinstance(value, list):
             return value
         if isinstance(value, tuple):
@@ -118,9 +140,7 @@ class Settings(BaseSettings):
         normalized = (value or "auto").strip().lower()
         allowed_modes = {"auto", "native", "openai"}
         if normalized not in allowed_modes:
-            raise ValueError(
-                "LM_STUDIO_API_MODE must be one of: auto, native, openai."
-            )
+            raise ValueError("LM_STUDIO_API_MODE must be one of: auto, native, openai.")
         return normalized
 
     @property

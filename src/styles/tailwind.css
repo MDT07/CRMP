@@ -5,7 +5,7 @@
   0%,
   100% {
     transform: translateY(0);
-    opacity: 0.55;
+    opacity: 1;
   }
   50% {
     transform: translateY(-4px);
@@ -16,7 +16,7 @@
 @keyframes pulse {
   0%,
   100% {
-    opacity: 0.8;
+    opacity: 1;
     transform: scale(1);
   }
   50% {
@@ -27,7 +27,7 @@
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(139, 155, 163, 0.35) transparent;
+  scrollbar-color: rgb(139, 155, 163) transparent;
 }
 
 *::-webkit-scrollbar {
@@ -40,13 +40,13 @@
 }
 
 *::-webkit-scrollbar-thumb {
-  background: rgba(139, 155, 163, 0.2);
+  background: rgb(139, 155, 163);
   border: 2px solid transparent;
   border-radius: 999px;
   background-clip: padding-box;
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: rgba(139, 155, 163, 0.35);
+  background: rgb(139, 155, 163);
   background-clip: padding-box;
 }

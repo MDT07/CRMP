@@ -4,7 +4,7 @@ import type { Workspace } from "../lib/crm-api";
 import { useCrmApp, type CrmConnectionState } from "../providers/CrmProvider";
 import { BrandLockup, BrandMark } from "./Brand";
 import { StatusBadge } from "./crm-ui";
-import { primaryNavItems, secondaryNavItems, type ShellNavItem } from "./shell-nav";
+import { navGroups, bottomNavItems, type ShellNavItem } from "./shell-nav";
 import {
   Sheet,
   SheetContent,
@@ -39,16 +39,16 @@ function SidebarBrand({
     >
       {compact ? (
         <div className="flex justify-center">
-          <BrandMark size="sm" className="size-8 rounded-[0.8rem] shadow-none" />
+          <BrandMark size="sm" className="size-9 rounded-xl shadow-none" />
         </div>
       ) : (
         <div className="flex items-center gap-3">
           <BrandLockup size="sm" showSubtitle={false} className="min-w-0 flex-1" />
           <div className="min-w-0 text-right">
-            <p className="text-[0.58rem] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+            <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
               Workspace
             </p>
-            <p className="truncate text-[0.74rem] text-muted-foreground">{subtitle}</p>
+            <p className="truncate text-sm text-muted-foreground">{subtitle}</p>
           </div>
         </div>
       )}
@@ -225,32 +225,37 @@ function SidebarNav({
   return (
     <nav
       className={cn(
-        "flex flex-1 flex-col gap-5 overflow-y-auto",
+        "flex flex-1 flex-col gap-6 overflow-y-auto",
         compact ? "px-2 py-3" : "px-3 py-3",
       )}
     >
-      <div className="space-y-2">
-        {!compact ? (
-          <p className="px-1 text-kicker text-muted-foreground/80">Workspace</p>
-        ) : null}
-        <div className={cn("space-y-1", compact && "flex flex-col items-center")}>
-          {primaryNavItems.map((item) => (
-            <SidebarNavItem
-              key={item.path}
-              item={item}
-              compact={compact}
-              onNavigate={onNavigate}
-            />
-          ))}
+      {navGroups.map((group, index) => (
+        <div key={group.label} className="space-y-4">
+          <div className="space-y-2">
+            {!compact ? (
+              <p className="px-2 text-[0.68rem] font-semibold uppercase tracking-[0.1em] text-sidebar-foreground/50">
+                {group.label}
+              </p>
+            ) : index > 0 ? (
+              <div className="my-2 mx-auto h-px w-6 bg-sidebar-border/50" />
+            ) : null}
+            <div className={cn("space-y-1", compact && "flex flex-col items-center")}>
+              {group.items.map((item) => (
+                <SidebarNavItem
+                  key={item.path}
+                  item={item}
+                  compact={compact}
+                  onNavigate={onNavigate}
+                />
+              ))}
+            </div>
+          </div>
         </div>
-      </div>
-
-      <div className="space-y-2">
-        {!compact ? (
-          <p className="px-1 text-kicker text-muted-foreground/80">Platform</p>
-        ) : null}
+      ))}
+      
+      <div className="mt-auto pt-6 space-y-2">
         <div className={cn("space-y-1", compact && "flex flex-col items-center")}>
-          {secondaryNavItems.map((item) => (
+          {bottomNavItems.map((item) => (
             <SidebarNavItem
               key={item.path}
               item={item}
@@ -285,7 +290,7 @@ function SidebarPanel({
 export function Sidebar({ mobileOpen, onMobileOpenChange }: SidebarProps) {
   return (
     <>
-      <aside className="hidden h-screen shrink-0 border-r border-sidebar-border/70 bg-sidebar xl:block xl:w-[14.5rem]">
+      <aside className="hidden h-screen shrink-0 border-r border-sidebar-border/70 bg-sidebar xl:block xl:w-[16rem]">
         <SidebarPanel />
       </aside>
 

@@ -12,9 +12,6 @@ const Dashboard = lazy(() =>
 const ClientsPage = lazy(() =>
   import("./components/pages/ClientsPage").then((module) => ({ default: module.ClientsPage })),
 );
-const AccountsPage = lazy(() =>
-  import("./components/pages/AccountsPage").then((module) => ({ default: module.AccountsPage })),
-);
 const PipelinePage = lazy(() =>
   import("./components/pages/PipelinePage").then((module) => ({ default: module.PipelinePage })),
 );
@@ -44,11 +41,17 @@ const CampaignsPage = lazy(() =>
 const ServicePage = lazy(() =>
   import("./components/pages/ServicePage").then((module) => ({ default: module.ServicePage })),
 );
-const AIAssistantPage = lazy(() =>
-  import("./components/pages/AIAssistantPage").then((module) => ({
-    default: module.AIAssistantPage,
+const CRMAgentPage = lazy(() =>
+  import("./components/pages/CRMAgentPage").then((module) => ({
+    default: module.CRMAgentPage,
   })),
 );
+const SwarmDashboardPage = lazy(() =>
+  import("./components/SwarmDashboard").then((module) => ({
+    default: module.SwarmDashboard,
+  })),
+);
+
 const AuthPage = lazy(() =>
   import("./components/pages/AuthPage").then((module) => ({ default: module.AuthPage })),
 );
@@ -57,6 +60,9 @@ const SettingsPage = lazy(() =>
 );
 const NotFoundPage = lazy(() =>
   import("./components/pages/NotFoundPage").then((module) => ({ default: module.NotFoundPage })),
+);
+const EmailInboxPage = lazy(() =>
+  import("./components/pages/EmailInboxPage").then((module) => ({ default: module.EmailInboxPage })),
 );
 
 export const router = createBrowserRouter([
@@ -78,17 +84,18 @@ export const router = createBrowserRouter([
         children: [
           { index: true, Component: Dashboard },
           { path: "clients", Component: ClientsPage },
-          { path: "accounts", Component: AccountsPage },
           { path: "pipeline", Component: PipelinePage },
           { path: "projects", Component: ProjectsPage },
           { path: "messages", Component: MessagesPage },
+          { path: "inbox", Component: EmailInboxPage },
           { path: "tasks", Component: TasksPage },
           { path: "automations", Component: AutomationsPage },
           { path: "campaigns", Component: CampaignsPage },
           { path: "forecast", Component: ForecastPage },
           { path: "analytics", Component: AnalyticsPage },
           { path: "service", Component: ServicePage },
-          { path: "ai-assistant", Component: AIAssistantPage },
+          { path: "crm-agent", Component: CRMAgentPage },
+          { path: "swarm-dashboard", Component: SwarmDashboardPage },
           { path: "settings", Component: SettingsPage },
           { path: "*", Component: NotFoundPage },
         ],

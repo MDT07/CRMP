@@ -158,7 +158,10 @@ export function AuthPage() {
       toast.success("Guest mode enabled", {
         description: "You can explore the CRM without creating an account first.",
       });
-      navigate(redirectTo);
+      // Force navigation to root and replace history state
+      navigate("/", { replace: true });
+    } catch (guestError) {
+      setFormError(getErrorMessage(guestError));
     } finally {
       setSubmitting(false);
     }
@@ -265,14 +268,15 @@ export function AuthPage() {
 
                   <div className="flex flex-wrap gap-3">
                     <Button
-                      className="flex-1"
-                      onClick={() => {
+                      className="flex-1 cursor-pointer"
+                      onClick={(e) => {
+                        e.preventDefault();
                         void handleGuestMode();
                       }}
                       disabled={submitting}
                     >
-                      Continue as guest
-                      <ArrowRight className="size-4" />
+                      {submitting ? "Entering..." : "Continue as guest"}
+                      <ArrowRight className="size-4 ml-2" />
                     </Button>
                     <Button
                       variant="outline"
@@ -285,6 +289,9 @@ export function AuthPage() {
 
                   {error ? (
                     <p className="text-sm text-warning">{error}</p>
+                  ) : null}
+                  {formError ? (
+                    <p className="text-sm text-danger">{formError}</p>
                   ) : null}
                 </div>
               ) : (
@@ -497,14 +504,15 @@ export function AuthPage() {
                     <Button
                       type="button"
                       variant="outline"
-                      className="w-full"
-                      onClick={() => {
+                      className="w-full cursor-pointer"
+                      onClick={(e) => {
+                        e.preventDefault();
                         void handleGuestMode();
                       }}
                       disabled={submitting}
                     >
-                      Continue as guest
-                      <ArrowRight className="size-4" />
+                      {submitting ? "Entering..." : "Continue as guest"}
+                      <ArrowRight className="size-4 ml-2" />
                     </Button>
                   </div>
 

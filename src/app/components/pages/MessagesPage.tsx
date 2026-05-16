@@ -324,7 +324,7 @@ export function MessagesPage() {
         if (cancelled) {
           return;
         }
-        console.warn("Messages workspace fell back to preview data.", loadError);
+        toast.warning("Messages workspace fell back to preview data.");
         setDataSource("preview");
         setError(
           isGuest
@@ -465,7 +465,7 @@ export function MessagesPage() {
           description: `Your ${activeComposeChannel} reply to ${activeConversation.name} is ready.`,
         });
       } catch (sendError) {
-        console.error(sendError);
+        // Error handled by toast
         toast.error("Could not send message", {
           description: "The live CRM message could not be created right now.",
         });
@@ -570,7 +570,7 @@ export function MessagesPage() {
               : `The reply was grounded in ${activeConversation.name}'s live thread.`,
         });
       } catch (draftError) {
-        console.error(draftError);
+        // Error handled by toast
         toast.error("AI draft unavailable", {
           description: "The inbox copilot could not build a grounded reply right now.",
         });
@@ -625,7 +625,7 @@ export function MessagesPage() {
           `${response.proposal.title} was executed inside the local CRM.`,
       });
     } catch (decisionError) {
-      console.error(decisionError);
+      // Error handled by toast
       toast.error("Could not approve action", {
         description: "The proposal could not be executed right now.",
       });
@@ -650,7 +650,7 @@ export function MessagesPage() {
         description: "The proposal was explicitly declined and left unexecuted.",
       });
     } catch (decisionError) {
-      console.error(decisionError);
+      // Error handled by toast
       toast.error("Could not reject action", {
         description: "The proposal status could not be updated right now.",
       });
@@ -680,7 +680,7 @@ export function MessagesPage() {
           description: `${activeConversation.name} is now in the task queue.`,
         });
       } catch (createError) {
-        console.error(createError);
+        // Error handled by toast
         toast.error("Could not create task", {
           description: "The follow-up task could not be saved right now.",
         });

@@ -4,7 +4,7 @@ import { ArrowUpRight } from "lucide-react";
 import { cn } from "../ui/utils";
 import { SurfaceCard } from "./surface-card";
 
-interface MetricCardProps extends React.ComponentProps<typeof SurfaceCard> {
+interface MetricCardProps extends Omit<React.ComponentProps<typeof SurfaceCard>, 'tone'> {
   label: string;
   value: string;
   delta: string;
@@ -43,16 +43,16 @@ export function MetricCard({
     >
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-1">
-          <p className="text-[0.62rem] font-semibold tracking-[0.18em] text-muted-foreground/80 uppercase">
+          <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground/80 uppercase">
             {label}
           </p>
           <div className="space-y-0.5">
-            <p className="font-metric text-[1.45rem] font-semibold text-foreground">
+            <p className="font-metric text-2xl font-semibold text-foreground">
               {value}
             </p>
             <p
               className={cn(
-                "inline-flex items-center gap-1 text-[0.68rem] font-medium",
+                "inline-flex items-center gap-1 text-xs font-medium",
                 deltaToneClasses[tone],
               )}
             >

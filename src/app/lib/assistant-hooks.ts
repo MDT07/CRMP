@@ -84,7 +84,7 @@ export function buildPageAssistantSelection(input: {
   };
 }
 
-export interface InboxAssistantSelection {
+export interface InboxAssistantSelection extends Record<string, unknown> {
   kind: "inbox-thread";
   dataSource: "live" | "preview";
   page: "messages";
@@ -108,8 +108,11 @@ export function isInboxAssistantSelection(
 
   return (
     selection.kind === "inbox-thread" &&
+    (selection.dataSource === "live" || selection.dataSource === "preview") &&
+    selection.page === "messages" &&
     typeof selection.threadId === "string" &&
     typeof selection.threadLabel === "string" &&
+    typeof selection.participantName === "string" &&
     Array.isArray(selection.messageIds)
   );
 }

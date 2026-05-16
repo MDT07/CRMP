@@ -4,12 +4,10 @@
 import type {
   Workspace,
   DashboardOverview,
-  ContactStatus,
   DealStage,
   Deal,
   Project,
   TaskStatus,
-  MessageChannel,
   PipelineStagePoint,
   ChannelMixPoint,
   RepPerformancePoint,

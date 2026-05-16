@@ -1,0 +1,11 @@
+{
+  "total_examples": 2500,
+  "task_breakdown": {
+    "contact_analysis": 500,
+    "deal_scoring": 500,
+    "email_reply": 500,
+    "follow_up_suggestion": 500,
+    "meeting_prep": 500
+  },
+  "generated_at": "2024-01-01T00:00:00Z"
+}

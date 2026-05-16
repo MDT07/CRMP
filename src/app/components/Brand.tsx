@@ -3,12 +3,13 @@ import { useId } from "react";
 import { cn } from "./ui/utils";
 
 interface BrandMarkProps extends React.ComponentProps<"div"> {
-  size?: "sm" | "md";
+  size?: "sm" | "md" | "lg";
 }
 
 const markSizeClasses = {
-  sm: "size-10 rounded-[1.1rem]",
-  md: "size-12 rounded-[1.35rem]",
+  sm: "size-9",
+  md: "size-11",
+  lg: "size-14",
 } as const;
 
 export function BrandMark({
@@ -17,104 +18,54 @@ export function BrandMark({
   ...props
 }: BrandMarkProps) {
   const baseId = useId().replace(/:/g, "");
-  const shellGradientId = `${baseId}-shell`;
-  const coreGradientId = `${baseId}-core`;
-  const lineGradientId = `${baseId}-line`;
-  const glowId = `${baseId}-glow`;
+  const gradientId = `${baseId}-gradient`;
 
   return (
     <div
       className={cn(
-        "relative isolate overflow-hidden border border-primary/18 bg-canvas shadow-[var(--shadow-glow)]",
+        "relative flex items-center justify-center rounded-xl bg-primary shadow-lg",
         markSizeClasses[size],
         className,
       )}
       {...props}
     >
       <svg
-        viewBox="0 0 64 64"
-        className="absolute inset-0 h-full w-full"
+        viewBox="0 0 40 40"
+        className="h-5/6 w-5/6"
+        fill="none"
         aria-hidden="true"
       >
         <defs>
-          <linearGradient id={shellGradientId} x1="8" y1="6" x2="58" y2="58">
-            <stop offset="0%" stopColor="#6eddff" />
-            <stop offset="38%" stopColor="#00a6fb" />
-            <stop offset="100%" stopColor="#0582ca" />
+          <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
+            <stop offset="100%" stopColor="#ffffff" stopOpacity="0.7" />
           </linearGradient>
-          <linearGradient id={coreGradientId} x1="14" y1="12" x2="50" y2="54">
-            <stop offset="0%" stopColor="#0c4266" />
-            <stop offset="100%" stopColor="#051923" />
-          </linearGradient>
-          <linearGradient id={lineGradientId} x1="18" y1="42" x2="48" y2="20">
-            <stop offset="0%" stopColor="#95e4ff" />
-            <stop offset="100%" stopColor="#ffffff" />
-          </linearGradient>
-          <radialGradient id={glowId} cx="0" cy="0" r="1" gradientTransform="translate(32 24) rotate(90) scale(28)">
-            <stop offset="0%" stopColor="#00a6fb" stopOpacity="0.34" />
-            <stop offset="100%" stopColor="#00a6fb" stopOpacity="0" />
-          </radialGradient>
         </defs>
-
-        <rect
-          x="1"
-          y="1"
-          width="62"
-          height="62"
-          rx="22"
-          fill={`url(#${shellGradientId})`}
-          fillOpacity="0.28"
-          stroke="rgba(255,255,255,0.14)"
-        />
-        <rect
-          x="7"
-          y="7"
-          width="50"
-          height="50"
-          rx="18"
-          fill={`url(#${coreGradientId})`}
-          stroke="rgba(149,228,255,0.14)"
-        />
-        <circle cx="32" cy="24" r="22" fill={`url(#${glowId})`} />
-
+        
+        {/* Minimal "C" shape - CRM */}
         <path
-          d="M16 42 L26 32 L36 36 L48 20"
-          stroke={`url(#${lineGradientId})`}
+          d="M28 12C28 12 24 8 18 8C12 8 8 13 8 20C8 27 12 32 18 32C24 32 28 28 28 28"
+          stroke={`url(#${gradientId})`}
           strokeWidth="4"
           strokeLinecap="round"
-          strokeLinejoin="round"
+          fill="none"
         />
-        <path
-          d="M17 48 H47"
-          stroke="rgba(149,228,255,0.16)"
-          strokeWidth="2"
-          strokeLinecap="round"
+        
+        {/* Connection dot */}
+        <circle
+          cx="30"
+          cy="12"
+          r="3"
+          fill="#ffffff"
+          fillOpacity="0.9"
         />
-
-        {[
-          { cx: 16, cy: 42 },
-          { cx: 26, cy: 32 },
-          { cx: 36, cy: 36 },
-          { cx: 48, cy: 20 },
-        ].map((node) => (
-          <g key={`${node.cx}-${node.cy}`}>
-            <circle
-              cx={node.cx}
-              cy={node.cy}
-              r="5"
-              fill="rgba(5,25,35,0.84)"
-              stroke="rgba(149,228,255,0.28)"
-            />
-            <circle cx={node.cx} cy={node.cy} r="2.2" fill="#f5fbff" />
-          </g>
-        ))}
       </svg>
     </div>
   );
 }
 
 interface BrandLockupProps extends React.ComponentProps<"div"> {
-  size?: "sm" | "md";
+  size?: "sm" | "md" | "lg";
   showSubtitle?: boolean;
   subtitle?: string;
 }
@@ -123,26 +74,38 @@ export function BrandLockup({
   className,
   size = "md",
   showSubtitle = true,
-  subtitle = "Next-generation CRM",
+  subtitle = "Customer Relationship Management",
   ...props
 }: BrandLockupProps) {
+  const textSizes = {
+    sm: "text-sm",
+    md: "text-base",
+    lg: "text-lg",
+  };
+
+  const subTextSizes = {
+    sm: "text-xs",
+    md: "text-sm",
+    lg: "text-base",
+  };
+
   return (
     <div className={cn("flex items-center gap-3", className)} {...props}>
       <BrandMark size={size} />
       <div className="min-w-0">
         <p
           className={cn(
-            "truncate font-semibold tracking-[0.06em] text-foreground",
-            size === "sm" ? "text-sm" : "text-[0.95rem]",
+            "truncate font-bold tracking-tight text-foreground",
+            textSizes[size],
           )}
         >
-          CRMP <span className="text-primary">by EmirCo</span>
+          CRMP
         </p>
         {showSubtitle ? (
           <p
             className={cn(
-              "truncate text-muted-foreground",
-              size === "sm" ? "text-[0.7rem]" : "text-xs",
+              "truncate text-muted-foreground font-medium",
+              subTextSizes[size],
             )}
           >
             {subtitle}
@@ -150,5 +113,29 @@ export function BrandLockup({
         ) : null}
       </div>
     </div>
+  );
+}
+
+// Simple text-only version for compact spaces
+interface BrandTextProps extends React.ComponentProps<"span"> {
+  variant?: "default" | "muted";
+}
+
+export function BrandText({
+  className,
+  variant = "default",
+  ...props
+}: BrandTextProps) {
+  return (
+    <span
+      className={cn(
+        "font-bold tracking-tight",
+        variant === "default" ? "text-foreground" : "text-muted-foreground",
+        className,
+      )}
+      {...props}
+    >
+      CRMP
+    </span>
   );
 }

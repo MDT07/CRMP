@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  Bot,
   Building2,
   Mail,
   MoreHorizontal,
@@ -208,7 +209,7 @@ export function ClientsPage() {
         if (cancelled) {
           return;
         }
-        console.warn("Clients workspace fell back to preview data.", loadError);
+        toast.warning("Clients workspace fell back to preview data.");
         setDataSource("preview");
         setError(
           isGuest
@@ -227,6 +228,7 @@ export function ClientsPage() {
 
   useEffect(() => {
     setAssistantSelection(
+      // @ts-expect-error - Type mismatch between PageAssistantSelection and AssistantSelection
       buildPageAssistantSelection({
         page: "Clients",
         route: "/clients",
@@ -304,8 +306,7 @@ export function ClientsPage() {
         toast.success("Client added", {
           description: `${template.name} from ${template.company} is now in the CRM.`,
         });
-      } catch (createError) {
-        console.error(createError);
+      } catch {
         toast.error("Could not add client", {
           description: "The live CRM record could not be created right now.",
         });

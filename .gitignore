@@ -81,3 +81,15 @@ alembic/versions/*.pyc
 
 # Misc
 .local-apps/
+
+# ── GSD baseline (auto-generated) ──
+.gsd
+*.code-workspace
+.env.*
+!.env.example
+.next/
+venv/
+target/
+vendor/
+coverage/
+tmp/

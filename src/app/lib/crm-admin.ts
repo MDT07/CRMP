@@ -309,7 +309,7 @@ export function storeAdminConsoleState(state: AdminConsoleState) {
 }
 
 export function createLocalInvite(
-  actorName: string,
+  _actorName: string,
   email: string,
   role: WorkspaceRole,
 ): TeamMemberAccess {

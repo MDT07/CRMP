@@ -11,10 +11,15 @@ from app.api import (
     routes_companies,
     routes_contacts,
     routes_deals,
+    routes_email,
     routes_health,
+    routes_integrations,
     routes_messages,
+    routes_multi_agent,
+    routes_nemotron,
     routes_organizations,
     routes_projects,
+    routes_swarm,
     routes_tasks,
 )
 
@@ -31,4 +36,9 @@ api_router.include_router(routes_tasks.router)
 api_router.include_router(routes_projects.router)
 api_router.include_router(routes_analytics.router)
 api_router.include_router(routes_ai.router)
+api_router.include_router(routes_nemotron.router)
+api_router.include_router(routes_multi_agent.router)
 api_router.include_router(routes_automation.router)
+api_router.include_router(routes_email.router)
+api_router.include_router(routes_integrations.router)
+api_router.include_router(routes_swarm.router)

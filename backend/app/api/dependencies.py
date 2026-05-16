@@ -101,6 +101,18 @@ async def get_current_user(
 CurrentUserDep = Annotated[User, Depends(get_current_user)]
 
 
+async def get_optional_current_user(
+    request: Request,
+    bearer_token: Annotated[Optional[str], Depends(oauth2_scheme)],
+    session: SessionDep,
+) -> Optional[User]:
+    """Get the current user if authenticated, otherwise return None."""
+    return await _resolve_user_from_request(request, bearer_token, session)
+
+
+OptionalCurrentUserDep = Annotated[Optional[User], Depends(get_optional_current_user)]
+
+
 async def get_workspace_access(
     request: Request,
     bearer_token: Annotated[Optional[str], Depends(oauth2_scheme)],

@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import {
-  AlertTriangle,
   ArrowRight,
   Briefcase,
   Clock3,
@@ -25,7 +24,6 @@ import {
 import type { GrowthPoint } from "../lib/crm-api";
 import { useCrmApp, type CrmConnectionState } from "../providers/CrmProvider";
 import {
-  MetricCard,
   PageHeader,
   SmartActionButton,
   StatusBadge,
@@ -142,7 +140,7 @@ function buildChartSeries(growth: GrowthPoint[]) {
 
 export function Dashboard() {
   const navigate = useNavigate();
-  const { connection, dashboard, error, isGuest, isLoading, refresh, workspace } =
+  const { connection, dashboard, isGuest, isLoading, refresh, workspace } =
     useCrmApp();
   const [range, setRange] = useState<"4w" | "8w">("4w");
   const todayLabel = new Intl.DateTimeFormat("en-US", {
@@ -165,7 +163,7 @@ export function Dashboard() {
     },
     null,
   );
-  const totalLeads = dashboard.growth.reduce((sum, point) => sum + point.leads_created, 0);
+  const totalLeads = dashboard.growth.reduce((sum: number, point: { leads_created: number }) => sum + point.leads_created, 0);
   const connectionTone = getConnectionTone(connection);
   const connectionLabel = getConnectionLabel(connection);
   const unreadPressure = Math.max(2, Math.round(workspace.stats.messages * 0.22));
@@ -269,7 +267,7 @@ export function Dashboard() {
         forecastGap > 0
           ? "One more qualified push would close the visible forecast gap."
           : "Forecast is matching or exceeding target in the visible range.",
-      tone: forecastGap > 0 ? "primary" : "success",
+      tone: forecastGap > 0 ? ("primary" as const) : ("success" as const),
       path: "/analytics",
     },
     {
@@ -305,32 +303,6 @@ export function Dashboard() {
     },
   ];
 
-  const automationItems = [
-    {
-      label: workspace.crm_ready ? "Follow-up automations ready" : "Workspace needs seed data",
-      value: workspace.crm_ready ? `${overdueTasks} reminders` : "Pending",
-      detail: workspace.crm_ready
-        ? "Tasks, deals, and inbox events are ready to trigger rules."
-        : "Seed starter CRM records before enabling workflow automation.",
-      tone: workspace.crm_ready ? ("success" as const) : ("warning" as const),
-      path: "/automations",
-    },
-    {
-      label: "No-response rule",
-      value: `${unreadPressure} threads`,
-      detail: "Turn silent threads into reminders, AI drafts, and owner alerts.",
-      tone: "primary" as const,
-      path: "/automations",
-    },
-    {
-      label: "Team coverage",
-      value: `${workspace.stats.members} teammates`,
-      detail: "The same workspace data is available across deals, inbox, and tasks.",
-      tone: "info" as const,
-      path: "/settings",
-    },
-  ];
-
   const recentActivity = [
     {
       title: `${formatInteger(totalLeads)} leads captured in the visible range`,
@@ -346,71 +318,6 @@ export function Dashboard() {
       title: `${workspace.stats.messages} linked conversations across ${channelBadges.length} channels`,
       detail: "Communication is centralized enough to support task creation and AI drafting.",
       tone: "info" as const,
-    },
-  ];
-
-  const workspaceCards = [
-    {
-      title: "Contacts",
-      description: "Profiles, segmentation, and interaction history stay connected in one record.",
-      stat: `${formatInteger(workspace.stats.contacts)} records`,
-      path: "/clients",
-      tone: "info" as const,
-    },
-    {
-      title: "Deals",
-      description: "Pipeline stages, ownership, and next steps stay visible without expanding into heavy cards.",
-      stat: `${formatInteger(workspace.stats.deals)} open opportunities`,
-      path: "/pipeline",
-      tone: "primary" as const,
-    },
-    {
-      title: "Inbox",
-      description: "All conversations land in one communication hub with AI and automation nearby.",
-      stat: `${formatInteger(workspace.stats.messages)} tracked threads`,
-      path: "/messages",
-      tone: "warning" as const,
-    },
-    {
-      title: "Accounts",
-      description: "Track account health, champions, and expansion plans with less manual prep.",
-      stat: `${formatInteger(workspace.stats.companies)} companies`,
-      path: "/accounts",
-      tone: "success" as const,
-    },
-    {
-      title: "Forecast",
-      description: "Run commit and upside scenarios before pipeline risk turns into missed target.",
-      stat: `${formatInteger(workspace.stats.deals)} opportunities`,
-      path: "/forecast",
-      tone: "primary" as const,
-    },
-    {
-      title: "Service",
-      description: "Keep SLA risk and customer outcomes visible inside the same CRM timeline.",
-      stat: `${formatInteger(Math.round(workspace.stats.messages * 0.36))} open tickets`,
-      path: "/service",
-      tone: "info" as const,
-    },
-  ];
-
-  const forecastStats = [
-    {
-      label: "Best period",
-      value: bestPeriod ? `${bestPeriod.month} · $${bestPeriod.revenue}K` : "Waiting for sync",
-      detail: bestPeriod
-        ? `${bestPeriod.dealsClosed} closed deals supported the strongest week.`
-        : "The chart will fill as soon as analytics are available.",
-    },
-    {
-      label: "Visible leads",
-      value: formatInteger(totalLeads),
-      detail: "Lead intake across the selected reporting window.",
-    },
-    {
-      label: "Workspace scope",
-      value: `${formatInteger(workspace.stats.contacts)} contacts`,
-      detail: `${formatInteger(workspace.stats.deals)} deals, ${formatInteger(workspace.stats.messages)} messages, ${formatInteger(workspace.stats.tasks)} tasks.`,
     },
   ];
 
@@ -455,7 +362,7 @@ export function Dashboard() {
                   onSelect: () => navigate("/messages"),
                 },
                 {
-                  label: "AI-suggested deal",
+                  label: "CRM Agent suggested deal",
                   description: "Open the pipeline and use the AI assistant to suggest stage and value.",
                   icon: Sparkles,
                   onSelect: () => navigate("/pipeline"),
@@ -472,434 +379,264 @@ export function Dashboard() {
         }
       />
 
-      <div className="grid gap-2.5 md:grid-cols-2 xl:grid-cols-4">
-        {metrics.map((metric, index) => (
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.8fr)_minmax(19rem,1fr)]">
+        <div className="flex flex-col gap-4">
           <motion.div
-            key={metric.label}
-            initial={{ opacity: 0, y: 12 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.04 + 0.04 }}
+            transition={{ duration: 0.34, ease: "easeOut" }}
           >
-            <MetricCard {...metric} />
+            <SurfaceCard tone="subtle" className="gap-0 overflow-hidden border-transparent bg-transparent shadow-none ring-0">
+              <div className="mb-4">
+                <h2 className="text-lg font-semibold text-foreground">Up Next</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Highest-value actions to keep revenue pace and response time under control.
+                </p>
+              </div>
+
+              <div className="grid gap-3">
+                {queueItems.map((item) => {
+                  const Icon = item.icon;
+
+                  return (
+                    <button
+                      key={item.title}
+                      onClick={() => navigate(item.path)}
+                      className="group flex w-full items-start gap-4 rounded-xl bg-surface-subtle/50 p-4 text-left transition-all duration-200 hover:bg-surface-subtle hover:shadow-sm"
+                    >
+                      <div
+                        className={cn(
+                          "mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-xl bg-background transition-colors duration-200",
+                          toneClasses[item.tone],
+                          "group-hover:bg-background"
+                        )}
+                      >
+                        <Icon className="size-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-[0.95rem] font-semibold text-foreground group-hover:text-primary transition-colors">{item.title}</p>
+                          <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                            {item.badge}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-[0.8rem] leading-relaxed text-muted-foreground/80">
+                          {item.detail}
+                        </p>
+                      </div>
+                      <div className="mt-1 shrink-0 text-muted-foreground/30 transition-colors duration-200 group-hover:text-primary/50">
+                        <ArrowRight className="size-4" />
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </SurfaceCard>
           </motion.div>
-        ))}
-      </div>
 
-      <div className="grid gap-3 xl:grid-cols-[minmax(0,1.48fr)_minmax(19rem,0.74fr)]">
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.34, ease: "easeOut" }}
-        >
-          <SurfaceCard tone="accent" className="gap-0 overflow-hidden">
-            <div className="flex flex-col gap-3 border-b border-border/75 px-4 py-3 lg:flex-row lg:items-start lg:justify-between">
-              <div className="space-y-1.5">
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <StatusBadge tone="primary">Growth chart</StatusBadge>
-                  <StatusBadge tone={connectionTone}>{connectionLabel}</StatusBadge>
-                  <StatusBadge tone={workspace.crm_ready ? "success" : "warning"}>
-                    {workspace.crm_ready ? "Live signal mix" : "Starter workspace"}
-                  </StatusBadge>
-                </div>
-                <div>
-                  <h2 className="text-foreground">Revenue, forecast, and target</h2>
-                  <p className="mt-1 max-w-2xl text-[0.82rem] leading-5 text-muted-foreground">
-                    One compact read on revenue pace, forecast risk, and whether current activity is enough to hit target.
-                  </p>
-                  {error ? <p className="mt-2 text-sm text-warning">{error}</p> : null}
-                </div>
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.34, delay: 0.1, ease: "easeOut" }}
+          >
+            <SurfaceCard tone="subtle" className="gap-0 overflow-hidden border-transparent bg-transparent shadow-none ring-0 mt-2">
+              <div className="mb-4">
+                <h2 className="text-lg font-semibold text-foreground">Action Required</h2>
               </div>
+              <div className="grid gap-3 sm:grid-cols-2 text-left">
+                  {riskItems.map((item) => (
+                    <button
+                      key={item.label}
+                      onClick={() => navigate(item.path)}
+                      className="flex flex-col gap-2 rounded-xl border border-border/40 bg-surface-muted/30 p-4 transition-all duration-200 hover:border-warning/30 hover:bg-warning/5"
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <StatusBadge tone={item.tone} className="px-2 py-0.5">{item.value}</StatusBadge>
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">{item.label}</p>
+                        <p className="mt-1 text-xs leading-relaxed text-muted-foreground/80 line-clamp-2">{item.detail}</p>
+                      </div>
+                    </button>
+                  ))}
+                  {inboxItems.slice(0, 1).map((item) => (
+                    <button
+                      key={item.label}
+                      onClick={() => navigate(item.path)}
+                      className="flex flex-col gap-2 rounded-xl border border-border/40 bg-surface-muted/30 p-4 transition-all duration-200 hover:border-info/30 hover:bg-info/5"
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <StatusBadge tone={item.tone} className="px-2 py-0.5">{item.value}</StatusBadge>
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">{item.label}</p>
+                        <p className="mt-1 text-xs leading-relaxed text-muted-foreground/80 line-clamp-2">{item.detail}</p>
+                      </div>
+                    </button>
+                  ))}
+              </div>
+            </SurfaceCard>
+          </motion.div>
+        </div>
 
-              <div className="flex items-center gap-1 self-start rounded-full border border-border/80 bg-card p-0.5">
-                {(["4w", "8w"] as const).map((option) => (
-                  <button
-                    key={option}
-                    onClick={() => setRange(option)}
-                    className={cn(
-                      "rounded-full px-2.5 py-1 text-[0.64rem] font-semibold tracking-[0.16em] uppercase transition-colors",
-                      option === range
-                        ? "bg-primary text-primary-foreground shadow-[var(--shadow-button)]"
-                        : "text-muted-foreground hover:text-foreground",
-                    )}
-                  >
-                    {option}
-                  </button>
-                ))}
-              </div>
+        <div className="flex flex-col gap-4">
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">Pulse</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Key metrics and recent activity at a glance.
+              </p>
             </div>
 
-            <div className="px-4 py-4">
-              <div className="mb-3 flex flex-wrap items-center gap-3 text-[0.72rem] text-muted-foreground">
-                <span className="inline-flex items-center gap-2">
-                  <span className="size-2 rounded-full bg-[var(--chart-1)]" />
-                  Actual revenue
-                </span>
-                <span className="inline-flex items-center gap-2">
-                  <span className="size-2 rounded-full bg-[var(--chart-2)]" />
-                  Forecast
-                </span>
-                <span className="inline-flex items-center gap-2">
-                  <span className="size-2 rounded-full bg-chart-3" />
-                  Target
-                </span>
-              </div>
+            <div className="grid gap-2.5">
+              {metrics.map((metric, index) => (
+                <motion.div
+                  key={metric.label}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.04 + 0.04 }}
+                >
+                  <div className="rounded-xl bg-surface-subtle/30 p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="flex size-8 items-center justify-center rounded-lg bg-background">
+                          <metric.icon className="size-4 text-muted-foreground" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">{metric.label}</p>
+                          <p className="text-lg font-semibold text-foreground">{metric.value}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-muted-foreground">{metric.delta}</p>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
 
-              <div className="rounded-[calc(var(--radius)-1px)] border border-border/80 bg-surface-muted p-3">
+            <div className="rounded-xl bg-surface-subtle/30 p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-foreground">Revenue & Forecast</h3>
+                <div className="flex items-center gap-1 rounded-full bg-background p-0.5">
+                  {(["4w", "8w"] as const).map((option) => (
+                    <button
+                      key={option}
+                      onClick={() => setRange(option)}
+                      className={cn(
+                        "rounded-full px-2 py-1 text-[0.64rem] font-semibold tracking-[0.16em] uppercase transition-colors",
+                        option === range
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      {option}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-baseline gap-2 mb-3">
+                <p className="font-metric text-2xl font-semibold tracking-tight text-foreground">
+                  {latestPoint ? `$${latestPoint.forecast}K` : "Syncing"}
+                </p>
+                <p className="text-xs text-muted-foreground">forecast</p>
+              </div>
+              <div className="h-[12rem] w-full">
                 <ChartContainer
                   config={chartConfig}
-                  className="h-[22rem] w-full aspect-auto [&_.recharts-cartesian-axis-tick_text]:fill-foreground/70 [&_.recharts-cartesian-grid_line]:stroke-border/70"
+                  className="h-full w-full aspect-auto [&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground [&_.recharts-cartesian-grid_line]:stroke-border/40"
                 >
                   <AreaChart
                     data={visibleData}
-                    margin={{ top: 12, right: 10, left: 0, bottom: 0 }}
+                    margin={{ top: 5, right: 0, left: -20, bottom: 0 }}
                   >
                     <defs>
                       <linearGradient id="growthFill" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="var(--color-revenue)" stopOpacity={0.28} />
-                        <stop offset="92%" stopColor="var(--color-revenue)" stopOpacity={0.02} />
+                        <stop offset="0%" stopColor="var(--color-chart-1)" stopOpacity={0.15} />
+                        <stop offset="100%" stopColor="var(--color-chart-1)" stopOpacity={0.0} />
                       </linearGradient>
                     </defs>
 
-                    <CartesianGrid vertical={false} strokeDasharray="0" />
+                    <CartesianGrid vertical={false} strokeDasharray="3 3" />
                     <XAxis
                       dataKey="month"
                       axisLine={false}
                       tickLine={false}
                       tickMargin={10}
+                      fontSize={11}
                     />
                     <YAxis
                       axisLine={false}
                       tickLine={false}
                       tickMargin={10}
-                      width={52}
+                      width={50}
+                      fontSize={11}
                       tickFormatter={(value) => `$${value}K`}
                     />
                     <ChartTooltip
                       cursor={false}
-                      content={
-                        <ChartTooltipContent
-                          indicator="line"
-                          formatter={(value, name) => {
-                            if (typeof value !== "number") {
-                              return null;
-                            }
-
-                            const label =
-                              typeof name === "string"
-                                ? chartConfig[name as keyof typeof chartConfig]?.label ?? name
-                                : name;
-
-                            return (
-                              <div className="flex min-w-[10rem] items-center justify-between gap-4">
-                                <span className="text-muted-foreground">{label}</span>
-                                <span className="font-metric font-semibold text-foreground">
-                                  ${value}K
-                                </span>
-                              </div>
-                            );
-                          }}
-                        />
-                      }
+                      content={<ChartTooltipContent indicator="line" />}
                     />
                     <Area
                       type="monotone"
                       dataKey="revenue"
-                      stroke="var(--color-revenue)"
-                      strokeWidth={3.25}
+                      stroke="var(--color-chart-1)"
+                      strokeWidth={2.5}
                       fill="url(#growthFill)"
                       dot={false}
                     />
                     <Line
                       type="monotone"
                       dataKey="forecast"
-                      stroke="var(--color-forecast)"
-                      strokeWidth={2.5}
-                      strokeDasharray="7 5"
+                      stroke="var(--color-chart-2)"
+                      strokeWidth={2}
+                      strokeDasharray="4 4"
                       dot={false}
                     />
                     <Line
                       type="monotone"
                       dataKey="target"
-                      stroke="var(--color-target)"
-                      strokeWidth={2}
+                      stroke="var(--color-chart-3)"
+                      strokeWidth={1.5}
                       dot={false}
                     />
                   </AreaChart>
                 </ChartContainer>
               </div>
+              {forecastGap > 0 && (
+                <div className="mt-3 rounded-lg bg-warning/10 px-3 py-2 text-xs text-warning-foreground">
+                  <span className="font-semibold">Target Risk:</span> ${forecastGap}K gap in visible range.
+                </div>
+              )}
+            </div>
 
-              <div className="mt-3 grid gap-2 md:grid-cols-3">
-                {forecastStats.map((stat) => (
-                  <div
-                    key={stat.label}
-                    className="rounded-[calc(var(--radius)-4px)] border border-border/80 bg-card px-3 py-2.5"
-                  >
-                    <p className="text-[0.64rem] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
-                      {stat.label}
-                    </p>
-                    <p className="mt-1 text-sm font-semibold text-foreground">{stat.value}</p>
-                    <p className="mt-1 text-xs leading-5 text-muted-foreground">{stat.detail}</p>
+            <div className="rounded-xl bg-surface-subtle/30 p-4">
+              <div className="mb-3">
+                <p className="text-sm font-semibold text-foreground">Recent Activity</p>
+              </div>
+              <div className="space-y-3">
+                {recentActivity.map((item) => (
+                  <div key={item.title} className="flex items-start gap-3">
+                    <div className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-background">
+                      {item.tone === "primary" ? (
+                        <TrendingUp className="size-3 text-primary" />
+                      ) : item.tone === "success" ? (
+                        <Sparkles className="size-3 text-success" />
+                      ) : (
+                        <Clock3 className="size-3 text-info" />
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-foreground leading-snug">{item.title}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground/80">{item.detail}</p>
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
-          </SurfaceCard>
-        </motion.div>
-
-        <div className="grid gap-3">
-          <SurfaceCard tone="subtle" className="gap-0 overflow-hidden">
-            <div className="border-b border-border/75 px-4 py-3">
-              <p className="text-sm font-semibold text-foreground">Today queue</p>
-              <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                The highest-value actions to keep revenue pace and response time under control.
-              </p>
-            </div>
-
-            <div className="space-y-2.5 p-3">
-              {queueItems.map((item) => {
-                const Icon = item.icon;
-
-                return (
-                  <button
-                    key={item.title}
-                    onClick={() => navigate(item.path)}
-                    className="flex w-full items-start gap-3 rounded-[calc(var(--radius)-2px)] border border-border/80 bg-card p-3 text-left transition-[border-color,background-color] duration-200 hover:border-primary/18 hover:bg-surface-strong/85"
-                  >
-                    <div
-                      className={cn(
-                        "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-[0.9rem] border",
-                        toneClasses[item.tone],
-                      )}
-                    >
-                      <Icon className="size-4" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <p className="text-sm font-semibold text-foreground">{item.title}</p>
-                        <StatusBadge tone={item.tone}>{item.badge}</StatusBadge>
-                      </div>
-                      <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                        {item.detail}
-                      </p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </SurfaceCard>
-
-          <SurfaceCard tone="subtle" className="gap-0 overflow-hidden">
-            <div className="border-b border-border/75 px-4 py-3">
-              <p className="text-sm font-semibold text-foreground">Forecast snapshot</p>
-              <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                A compact read on coverage, target risk, and current execution pace.
-              </p>
-            </div>
-
-            <div className="grid gap-2.5 p-3">
-              <div className="rounded-[calc(var(--radius)-2px)] border border-primary/16 bg-surface-strong/70 px-3 py-3">
-                <p className="text-[0.64rem] font-semibold tracking-[0.18em] text-primary/80 uppercase">
-                  Current forecast
-                </p>
-                <p className="mt-1 font-metric text-xl font-semibold text-foreground">
-                  {latestPoint ? `$${latestPoint.forecast}K` : "Syncing"}
-                </p>
-                <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                  {forecastGap > 0
-                    ? `${forecastGap}K below target in the visible range.`
-                    : "Forecast is matching or exceeding target right now."}
-                </p>
-              </div>
-
-              <div className="grid gap-2 sm:grid-cols-2">
-                <div className="rounded-[calc(var(--radius)-4px)] border border-border/80 bg-card px-3 py-2.5">
-                  <p className="text-[0.64rem] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
-                    Best week
-                  </p>
-                  <p className="mt-1 text-sm font-semibold text-foreground">
-                    {bestPeriod ? `${bestPeriod.month} · $${bestPeriod.revenue}K` : "Waiting for sync"}
-                  </p>
-                </div>
-                <div className="rounded-[calc(var(--radius)-4px)] border border-border/80 bg-card px-3 py-2.5">
-                  <p className="text-[0.64rem] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
-                    Response pace
-                  </p>
-                  <p className="mt-1 text-sm font-semibold text-foreground">{replySla}</p>
-                </div>
-              </div>
-            </div>
-          </SurfaceCard>
+          </div>
         </div>
-      </div>
-
-      <div className="grid gap-4 xl:grid-cols-3">
-        <SurfaceCard tone="subtle" className="gap-0 overflow-hidden">
-          <div className="border-b border-border/75 px-4 py-3.5">
-            <p className="text-sm font-semibold text-foreground">At-risk pipeline</p>
-            <p className="mt-1 text-xs leading-5 text-muted-foreground">
-              Pressure points that are most likely to affect forecast confidence.
-            </p>
-          </div>
-          <div className="space-y-2.5 p-3">
-            {riskItems.map((item) => (
-              <button
-                key={item.label}
-                onClick={() => navigate(item.path)}
-                className="w-full rounded-[calc(var(--radius)+1px)] border border-border/80 bg-surface-strong/70 p-3 text-left transition-[border-color,background-color] duration-200 hover:border-primary/18 hover:bg-surface-strong"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-foreground">{item.label}</p>
-                    <p className="mt-1 text-xs leading-5 text-muted-foreground">{item.detail}</p>
-                  </div>
-                  <StatusBadge tone={item.tone}>{item.value}</StatusBadge>
-                </div>
-              </button>
-            ))}
-          </div>
-        </SurfaceCard>
-
-        <SurfaceCard tone="subtle" className="gap-0 overflow-hidden">
-          <div className="border-b border-border/75 px-4 py-3.5">
-            <p className="text-sm font-semibold text-foreground">Inbox pressure</p>
-            <p className="mt-1 text-xs leading-5 text-muted-foreground">
-              Keep conversations centralized, reply faster, and reduce leakage between channels.
-            </p>
-          </div>
-          <div className="space-y-2.5 p-3">
-            {inboxItems.map((item) => (
-              <button
-                key={item.label}
-                onClick={() => navigate(item.path)}
-                className="w-full rounded-[calc(var(--radius)+1px)] border border-border/80 bg-surface-strong/70 p-3 text-left transition-[border-color,background-color] duration-200 hover:border-primary/18 hover:bg-surface-strong"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-foreground">{item.label}</p>
-                    <p className="mt-1 text-xs leading-5 text-muted-foreground">{item.detail}</p>
-                  </div>
-                  <StatusBadge tone={item.tone}>{item.value}</StatusBadge>
-                </div>
-              </button>
-            ))}
-          </div>
-        </SurfaceCard>
-
-        <SurfaceCard tone="subtle" className="gap-0 overflow-hidden">
-          <div className="border-b border-border/75 px-4 py-3.5">
-            <p className="text-sm font-semibold text-foreground">Automation alerts</p>
-            <p className="mt-1 text-xs leading-5 text-muted-foreground">
-              Rules, reminders, and no-response workflows that can remove manual load.
-            </p>
-          </div>
-          <div className="space-y-2.5 p-3">
-            {automationItems.map((item) => (
-              <button
-                key={item.label}
-                onClick={() => navigate(item.path)}
-                className="w-full rounded-[calc(var(--radius)+1px)] border border-border/80 bg-surface-strong/70 p-3 text-left transition-[border-color,background-color] duration-200 hover:border-primary/18 hover:bg-surface-strong"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-foreground">{item.label}</p>
-                    <p className="mt-1 text-xs leading-5 text-muted-foreground">{item.detail}</p>
-                  </div>
-                  <StatusBadge tone={item.tone}>{item.value}</StatusBadge>
-                </div>
-              </button>
-            ))}
-          </div>
-        </SurfaceCard>
-      </div>
-
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,0.95fr)]">
-        <SurfaceCard tone="subtle" className="gap-0 overflow-hidden">
-          <div className="border-b border-border/75 px-4 py-3.5">
-            <p className="text-sm font-semibold text-foreground">Recent activity</p>
-            <p className="mt-1 text-xs leading-5 text-muted-foreground">
-              A compact timeline of what the workspace is already telling the team.
-            </p>
-          </div>
-          <div className="space-y-2.5 p-3">
-            {recentActivity.map((item) => (
-              <div
-                key={item.title}
-                className="rounded-[calc(var(--radius)+1px)] border border-border/80 bg-surface-strong/70 px-3 py-3"
-              >
-                <div className="flex items-start gap-3">
-                  <div
-                    className={cn(
-                      "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-[0.9rem] border",
-                      toneClasses[item.tone],
-                    )}
-                  >
-                    {item.tone === "primary" ? (
-                      <TrendingUp className="size-4" />
-                    ) : item.tone === "success" ? (
-                      <Sparkles className="size-4" />
-                    ) : (
-                      <Clock3 className="size-4" />
-                    )}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-foreground">{item.title}</p>
-                    <p className="mt-1 text-xs leading-5 text-muted-foreground">{item.detail}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </SurfaceCard>
-
-        <SurfaceCard tone="subtle" className="gap-0 overflow-hidden">
-          <div className="border-b border-border/75 px-4 py-3.5">
-            <p className="text-sm font-semibold text-foreground">Core workspaces</p>
-            <p className="mt-1 text-xs leading-5 text-muted-foreground">
-              Contacts, deals, and communication stay grouped so the CRM remains fast to scan at scale.
-            </p>
-          </div>
-
-          <div className="space-y-2.5 p-3">
-            {workspaceCards.map((workspaceCard) => (
-              <button
-                key={workspaceCard.title}
-                onClick={() => navigate(workspaceCard.path)}
-                className="w-full rounded-[calc(var(--radius)+1px)] border border-border/80 bg-surface-strong/70 p-3 text-left transition-[border-color,background-color] duration-200 hover:border-primary/18 hover:bg-surface-strong"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-sm font-semibold text-foreground">
-                        {workspaceCard.title}
-                      </p>
-                      <StatusBadge tone={workspaceCard.tone}>
-                        {workspaceCard.stat}
-                      </StatusBadge>
-                    </div>
-                    <p className="mt-1.5 text-xs leading-5 text-muted-foreground">
-                      {workspaceCard.description}
-                    </p>
-                  </div>
-                  <ArrowRight className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                </div>
-              </button>
-            ))}
-          </div>
-
-          <div className="border-t border-border/75 px-4 py-3">
-            <div className="mb-2 flex items-center gap-2">
-              <AlertTriangle className="size-4 text-warning" />
-              <p className="text-sm font-semibold text-foreground">Channel readiness</p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {channelBadges.map((channel) => (
-                <StatusBadge key={channel} tone="info">
-                  {channel}
-                </StatusBadge>
-              ))}
-            </div>
-          </div>
-        </SurfaceCard>
       </div>
     </div>
   );

@@ -20,8 +20,10 @@ import {
   restoreCrmSession,
   type AuthenticatedUser,
   type CrmSession,
+  type DashboardOverview,
   type LoginPayload,
   type RegistrationPayload,
+  type Workspace,
 } from "../lib/crm-api";
 import { guestDashboard, guestWorkspace } from "../lib/fallback-data";
 

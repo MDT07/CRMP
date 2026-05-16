@@ -1,19 +1,46 @@
+import {
+  DndContext,
+  DragOverlay,
+  closestCorners,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragStartEvent,
+  DragOverEvent,
+  DragEndEvent,
+  defaultDropAnimationSideEffects,
+  DropAnimation,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { useEffect, useMemo, useState } from "react";
 import {
-  AlertTriangle,
   Bot,
   Briefcase,
   Calendar,
-  Clock3,
+  Clock,
   DollarSign,
+  Flag,
   MoreHorizontal,
   Plus,
   Sparkles,
   TrendingUp,
   User,
   Zap,
+  GripVertical,
+  ChevronDown,
+  ChevronUp,
+  Filter,
+  Search,
 } from "lucide-react";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 
 import {
@@ -21,6 +48,7 @@ import {
   fetchCompanies,
   fetchContacts,
   fetchDeals,
+  updateDeal,
   type Contact,
   type DealStage,
 } from "../../lib/crm-api";
@@ -36,19 +64,43 @@ import {
   SurfaceCard,
 } from "../crm-ui";
 import { Button } from "../ui/button";
+import { Input } from "../ui/input";
 import { cn } from "../ui/utils";
+
+// Types
+interface DealCard {
+  id: string | number;
+  company: string;
+  contact: string;
+  title: string;
+  value: string;
+  close: string;
+  prob: number;
+  priority?: "high" | "medium" | "low";
+  tags?: string[];
+  lastActivity?: string;
+}
+
+type DealBoard = Record<DealStage, DealCard[]>;
+
+interface StageConfig {
+  id: DealStage;
+  label: string;
+  tone: StageTone;
+  color: string;
+  limit?: number;
+}
 
 type StageTone = "primary" | "info" | "warning" | "success" | "danger";
 
-type DealBoard = Record<DealStage, DealCard>;
-
-const stageConfigs: { id: DealStage; label: string; tone: StageTone }[] = [
-  { id: "lead", label: "Lead", tone: "info" },
-  { id: "qualified", label: "Qualified", tone: "info" },
-  { id: "proposal", label: "Proposal", tone: "primary" },
-  { id: "negotiation", label: "Negotiation", tone: "warning" },
-  { id: "closed_won", label: "Closed Won", tone: "success" },
-  { id: "closed_lost", label: "Closed Lost", tone: "danger" },
+// Stage Configuration
+const stageConfigs: StageConfig[] = [
+  { id: "lead", label: "Lead", tone: "info", color: "#3b82f6" },
+  { id: "qualified", label: "Qualified", tone: "info", color: "#06b6d4" },
+  { id: "proposal", label: "Proposal", tone: "primary", color: "#8b5cf6" },
+  { id: "negotiation", label: "Negotiation", tone: "warning", color: "#f59e0b" },
+  { id: "closed_won", label: "Closed Won", tone: "success", color: "#10b981" },
+  { id: "closed_lost", label: "Closed Lost", tone: "danger", color: "#ef4444" },
 ];
 
 const toneClasses: Record<StageTone, string> = {
@@ -59,10 +111,7 @@ const toneClasses: Record<StageTone, string> = {
   danger: "bg-danger text-danger",
 };
 
-const badgeTone: Record<
-  StageTone,
-  "primary" | "info" | "warning" | "success" | "danger"
-> = {
+const badgeTone: Record<StageTone, "primary" | "info" | "warning" | "success" | "danger"> = {
   primary: "primary",
   info: "info",
   warning: "warning",
@@ -81,6 +130,293 @@ const buttonVariant: Record<
   danger: "destructive",
 };
 
+// Sortable Deal Card Component
+function SortableDealCard({
+  deal,
+  stageId,
+  onClick,
+  onOptions,
+  isOverlay = false,
+}: {
+  deal: DealCard;
+  stageId: DealStage;
+  onClick: () => void;
+  onOptions: (e: React.MouseEvent) => void;
+  isOverlay?: boolean;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: String(deal.id),
+    data: {
+      type: "Deal",
+      deal,
+      stageId,
+    },
+  });
+
+  const style = {
+    transform: CSS.Translate.toString(transform),
+    transition,
+  };
+
+  const stage = stageConfigs.find((s) => s.id === stageId)!;
+
+  return (
+    <motion.div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      initial={!isOverlay ? { opacity: 0, y: 8 } : undefined}
+      animate={{ opacity: isDragging ? 0.5 : 1, y: 0 }}
+      transition={{ duration: 0.2 }}
+      onClick={onClick}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onClick();
+        }
+      }}
+      role="button"
+      tabIndex={0}
+      className={cn(
+        "group relative w-full cursor-pointer rounded-[calc(var(--radius)+1px)] border border-border/80 bg-surface-strong/70 p-3 text-left transition-all duration-200",
+        "hover:-translate-y-0.5 hover:border-primary/18 hover:bg-surface-strong hover:shadow-lg",
+        isOverlay && "shadow-2xl rotate-2 scale-105 cursor-grabbing z-50",
+        isDragging && "opacity-50"
+      )}
+    >
+      {/* Drag Handle */}
+      <div
+        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <GripVertical className="size-4 text-muted-foreground cursor-grab active:cursor-grabbing" />
+      </div>
+
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <p className="truncate text-sm font-semibold text-foreground">
+              {deal.company}
+            </p>
+            {deal.priority === "high" && (
+              <Flag className="size-3 text-warning" />
+            )}
+          </div>
+          <p className="mt-1 truncate text-xs text-muted-foreground">
+            {deal.title}
+          </p>
+          <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+            <User className="size-3.5" />
+            {deal.contact}
+          </div>
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="rounded-[0.95rem] opacity-0 group-hover:opacity-100 transition-opacity"
+          onClick={(event) => {
+            event.stopPropagation();
+            onOptions(event);
+          }}
+        >
+          <MoreHorizontal className="size-4" />
+        </Button>
+      </div>
+
+      {/* Tags */}
+      {deal.tags && deal.tags.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-1">
+          {deal.tags.slice(0, 2).map((tag) => (
+            <span
+              key={tag}
+              className="px-1.5 py-0.5 text-[0.65rem] rounded-full bg-primary/10 text-primary"
+            >
+              {tag}
+            </span>
+          ))}
+          {deal.tags.length > 2 && (
+            <span className="px-1.5 py-0.5 text-[0.65rem] text-muted-foreground">
+              +{deal.tags.length - 2}
+            </span>
+          )}
+        </div>
+      )}
+
+      <div className="mt-3 grid gap-2">
+        <div className="flex items-center justify-between gap-2 text-xs">
+          <div className="flex items-center gap-1.5 font-metric font-semibold text-foreground">
+            <DollarSign className="size-3.5" />
+            {deal.value}
+          </div>
+          <div className="flex items-center gap-1.5 text-muted-foreground">
+            <Calendar className="size-3.5" />
+            {deal.close}
+          </div>
+        </div>
+
+        {/* Progress Bar */}
+        <div>
+          <div className="flex items-center justify-between text-[0.72rem] text-muted-foreground">
+            <span>Confidence</span>
+            <span className="font-metric text-foreground">{deal.prob}%</span>
+          </div>
+          <div className="mt-1.5 h-1.5 rounded-full bg-background/60 overflow-hidden">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${deal.prob}%` }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className={cn(
+                "h-full rounded-full",
+                stage.tone === "success"
+                  ? "bg-success"
+                  : stage.tone === "warning"
+                  ? "bg-warning"
+                  : stage.tone === "danger"
+                  ? "bg-danger"
+                  : stage.tone === "primary"
+                  ? "bg-primary"
+                  : "bg-info"
+              )}
+            />
+          </div>
+        </div>
+
+        {/* Last Activity */}
+        {deal.lastActivity && (
+          <div className="flex items-center gap-1.5 text-[0.65rem] text-muted-foreground">
+            <Clock className="size-3" />
+            {deal.lastActivity}
+          </div>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
+// Stage Column Component
+function StageColumn({
+  stage,
+  deals,
+  onAddDeal,
+  onDealClick,
+  onDealOptions,
+  isCreating,
+  searchQuery,
+}: {
+  stage: StageConfig;
+  deals: DealCard[];
+  onAddDeal: () => void;
+  onDealClick: (deal: DealCard) => void;
+  onDealOptions: (deal: DealCard, e: React.MouseEvent) => void;
+  isCreating: boolean;
+  searchQuery: string;
+}) {
+  const { setNodeRef, isOver } = useSortable({
+    id: stage.id,
+    data: {
+      type: "Stage",
+      stageId: stage.id,
+    },
+  });
+
+  const filteredDeals = useMemo(() => {
+    if (!searchQuery) return deals;
+    const query = searchQuery.toLowerCase();
+    return deals.filter(
+      (deal) =>
+        deal.company.toLowerCase().includes(query) ||
+        deal.contact.toLowerCase().includes(query) ||
+        deal.title.toLowerCase().includes(query) ||
+        deal.tags?.some((tag) => tag.toLowerCase().includes(query))
+    );
+  }, [deals, searchQuery]);
+
+  const stageTotal = filteredDeals.reduce(
+    (sum, deal) => sum + parseCurrencyLabel(deal.value),
+    0
+  );
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={cn(
+        "flex w-[18rem] min-w-[18rem] flex-col rounded-[calc(var(--radius)+2px)] border border-border/80 bg-card transition-colors",
+        isOver && "border-primary/40 bg-primary/5"
+      )}
+    >
+      {/* Stage Header */}
+      <div className="flex items-center justify-between border-b border-border/75 px-3.5 py-3">
+        <div className="flex items-center gap-2">
+          <span
+            className={cn("size-2 rounded-full", toneClasses[stage.tone])}
+          />
+          <p className="text-sm font-semibold text-foreground">{stage.label}</p>
+          <StatusBadge tone={badgeTone[stage.tone]}>
+            {filteredDeals.length}
+          </StatusBadge>
+        </div>
+        <Button
+          variant={buttonVariant[stage.tone]}
+          size="icon"
+          className="rounded-[0.95rem]"
+          onClick={onAddDeal}
+          disabled={isCreating}
+        >
+          <Plus className="size-4" />
+        </Button>
+      </div>
+
+      {/* Stage Value */}
+      <div className="border-b border-border/50 px-3.5 py-2">
+        <p className="font-metric text-sm font-semibold text-foreground">
+          {formatCurrencyValue(stageTotal)}
+        </p>
+      </div>
+
+      {/* Deals List */}
+      <div className="min-h-[200px] flex-1 space-y-2.5 overflow-y-auto p-3">
+        <SortableContext
+          items={filteredDeals.map((d) => String(d.id))}
+          strategy={verticalListSortingStrategy}
+        >
+          <AnimatePresence mode="popLayout">
+            {filteredDeals.map((deal) => (
+              <SortableDealCard
+                key={deal.id}
+                deal={deal}
+                stageId={stage.id}
+                onClick={() => onDealClick(deal)}
+                onOptions={(e) => onDealOptions(deal, e)}
+              />
+            ))}
+          </AnimatePresence>
+        </SortableContext>
+
+        {filteredDeals.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <div className="mb-2 rounded-full bg-muted p-3">
+              <Briefcase className="size-5 text-muted-foreground" />
+            </div>
+            <p className="text-sm text-muted-foreground">No deals</p>
+            <p className="text-xs text-muted-foreground">
+              Drag deals here or click + to add
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Helper functions
 function emptyBoard(): DealBoard {
   return {
     lead: [],
@@ -99,7 +435,7 @@ function parseCurrencyLabel(value: string) {
 function buildDealBoard(
   deals: Awaited<ReturnType<typeof fetchDeals>>,
   contacts: Awaited<ReturnType<typeof fetchContacts>>,
-  companies: Awaited<ReturnType<typeof fetchCompanies>>,
+  companies: Awaited<ReturnType<typeof fetchCompanies>>
 ) {
   const board = emptyBoard();
   const contactMap = new Map(contacts.map((contact) => [contact.id, contact]));
@@ -110,6 +446,17 @@ function buildDealBoard(
     const company =
       contact?.company_id ? companyMap.get(contact.company_id)?.name : undefined;
 
+    // Calculate priority based on days until close and probability
+    const daysUntilClose = deal.expected_close_date
+      ? Math.ceil(
+          (new Date(deal.expected_close_date).getTime() - Date.now()) /
+            (1000 * 60 * 60 * 24)
+        )
+      : 999;
+    let priority: "high" | "medium" | "low" = "low";
+    if (daysUntilClose <= 7 && deal.probability >= 50) priority = "high";
+    else if (daysUntilClose <= 14 || deal.probability >= 30) priority = "medium";
+
     board[deal.pipeline_stage].push({
       id: deal.id,
       company: company ?? deal.title,
@@ -118,12 +465,18 @@ function buildDealBoard(
       value: formatCurrencyValue(deal.amount, deal.currency),
       close: formatDueLabel(deal.expected_close_date),
       prob: Math.round(deal.probability),
+      priority,
+      lastActivity: deal.updated_at
+        ? new Date(deal.updated_at).toLocaleDateString()
+        : undefined,
     });
   }
 
+  // Sort by value descending
   for (const stageId of Object.keys(board) as DealStage[]) {
     board[stageId].sort(
-      (left, right) => parseCurrencyLabel(right.value) - parseCurrencyLabel(left.value),
+      (left, right) =>
+        parseCurrencyLabel(right.value) - parseCurrencyLabel(left.value)
     );
   }
 
@@ -136,6 +489,7 @@ function addDays(days: number) {
   return nextDate.toISOString().slice(0, 10);
 }
 
+// Main Pipeline Component
 export function PipelinePage() {
   const {
     clearAssistantSelection,
@@ -145,29 +499,55 @@ export function PipelinePage() {
   } = useCrmApp();
   const guestPreviewMessage =
     "Guest mode is showing demo pipeline data so you can explore deals without registration.";
+
   const [deals, setDeals] = useState<DealBoard>(fallbackDeals);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [dataSource, setDataSource] = useState<"loading" | "live" | "preview">(
-    connection === "loading" ? "loading" : "preview",
+    connection === "loading" ? "loading" : "preview"
   );
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(
     connection === "fallback"
       ? "Backend connection is unavailable, so the pipeline board is showing preview data."
       : isGuest
-        ? guestPreviewMessage
-        : null,
+      ? guestPreviewMessage
+      : null
   );
+
+  // Drag and Drop State
+  const [activeDeal, setActiveDeal] = useState<DealCard | null>(null);
+  const [activeStage, setActiveStage] = useState<DealStage | null>(null);
+
+  // Search and Filter State
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+
   const sourceTone =
-    dataSource === "live" ? "success" : dataSource === "loading" || isGuest ? "info" : "warning";
+    dataSource === "live"
+      ? "success"
+      : dataSource === "loading" || isGuest
+      ? "info"
+      : "warning";
   const sourceLabel =
     dataSource === "live"
       ? "Live pipeline"
       : dataSource === "loading"
-        ? "Syncing"
-        : isGuest
-          ? "Guest pipeline"
-          : "Preview board";
+      ? "Syncing"
+      : isGuest
+      ? "Guest pipeline"
+      : "Preview board";
+
+  // Sensors for drag and drop
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   const loadPipeline = async () => {
     const [companyRecords, contactRecords, dealRecords] = await Promise.all([
@@ -193,7 +573,7 @@ export function PipelinePage() {
       setError(
         connection === "fallback"
           ? "Backend connection is unavailable, so the pipeline board is showing preview data."
-          : guestPreviewMessage,
+          : guestPreviewMessage
       );
       return;
     }
@@ -207,12 +587,12 @@ export function PipelinePage() {
         if (cancelled) {
           return;
         }
-        console.warn("Pipeline workspace fell back to preview data.", loadError);
+        toast.warning("Pipeline workspace fell back to preview data.");
         setDataSource("preview");
         setError(
           isGuest
             ? guestPreviewMessage
-            : "Using preview pipeline data because the live deal records could not be loaded.",
+            : "Using preview pipeline data because the live deal records could not be loaded."
         );
       }
     };
@@ -229,10 +609,11 @@ export function PipelinePage() {
       .flatMap((stage) => deals[stage.id].slice(0, 2))
       .slice(0, 6)
       .map((deal) => ({
-        entity_type: "deal",
+        entity_type: "deal" as const,
         entity_id: String(deal.id),
       }));
 
+    // @ts-ignore - Type mismatch between PageAssistantSelection and AssistantSelection
     setAssistantSelection(
       buildPageAssistantSelection({
         page: "Pipeline",
@@ -240,7 +621,7 @@ export function PipelinePage() {
         dataSource,
         selectedEntities,
         summary: "Pipeline stage and deal momentum context",
-      }),
+      })
     );
 
     return () => {
@@ -248,25 +629,132 @@ export function PipelinePage() {
     };
   }, [clearAssistantSelection, dataSource, deals, setAssistantSelection]);
 
+  // Drag and Drop Handlers
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    const dealId = active.id as string;
+
+    // Find the deal in any stage
+    for (const stageId of Object.keys(deals) as DealStage[]) {
+      const deal = deals[stageId].find((d) => String(d.id) === dealId);
+      if (deal) {
+        setActiveDeal(deal);
+        setActiveStage(stageId);
+        break;
+      }
+    }
+  };
+
+  const handleDragOver = (event: DragOverEvent) => {
+    const { active, over } = event;
+
+    if (!over) return;
+
+    const activeId = active.id as string;
+    const overId = over.id as string;
+
+    // Find active deal
+    let activeDealData: DealCard | null = null;
+    let activeStageId: DealStage | null = null;
+
+    for (const stageId of Object.keys(deals) as DealStage[]) {
+      const deal = deals[stageId].find((d) => String(d.id) === activeId);
+      if (deal) {
+        activeDealData = deal;
+        activeStageId = stageId;
+        break;
+      }
+    }
+
+    if (!activeDealData || !activeStageId) return;
+
+    // Check if over a stage
+    const overStage = stageConfigs.find((s) => s.id === overId);
+    if (overStage && activeStageId !== overStage.id) {
+      // Move deal to new stage
+      setDeals((prev) => {
+        const newDeals = { ...prev };
+        newDeals[activeStageId!] = newDeals[activeStageId!].filter(
+          (d) => String(d.id) !== activeId
+        );
+        newDeals[overStage.id] = [activeDealData!, ...newDeals[overStage.id]];
+        return newDeals;
+      });
+
+      // Update backend if live
+      if (dataSource === "live") {
+        updateDeal(activeId, { pipeline_stage: overStage.id }).catch(
+          () => {
+            toast.error("Failed to update deal stage. Please try again.");
+          }
+        );
+      }
+    }
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    setActiveDeal(null);
+    setActiveStage(null);
+
+    if (!over) return;
+
+    const activeId = active.id as string;
+    const overId = over.id as string;
+
+    // Handle reordering within same stage
+    if (activeId === overId) return;
+
+    // Find which stage the deal is in
+    for (const stageId of Object.keys(deals) as DealStage[]) {
+      const stageDeals = deals[stageId];
+      const activeIndex = stageDeals.findIndex((d) => String(d.id) === activeId);
+      const overIndex = stageDeals.findIndex((d) => String(d.id) === overId);
+
+      if (activeIndex !== -1 && overIndex !== -1) {
+        // Reorder within same stage
+        setDeals((prev) => ({
+          ...prev,
+          [stageId]: arrayMove(prev[stageId], activeIndex, overIndex),
+        }));
+        break;
+      }
+    }
+  };
+
+  const dropAnimation: DropAnimation = {
+    sideEffects: defaultDropAnimationSideEffects({
+      styles: {
+        active: {
+          opacity: "0.5",
+        },
+      },
+    }),
+  };
+
+  // Metrics
   const allDeals = Object.values(deals).flat();
   const totalDeals = allDeals.length;
   const totalPipelineValue = allDeals.reduce(
     (sum, deal) => sum + parseCurrencyLabel(deal.value),
-    0,
+    0
   );
   const activeDeals = useMemo(
-    () => [...deals.lead, ...deals.qualified, ...deals.proposal, ...deals.negotiation],
-    [deals],
+    () =>
+      [...deals.lead, ...deals.qualified, ...deals.proposal, ...deals.negotiation],
+    [deals]
   );
   const highIntentCount = deals.proposal.length + deals.negotiation.length;
   const averageProbability =
     activeDeals.length > 0
       ? Math.round(
-          activeDeals.reduce((sum, deal) => sum + deal.prob, 0) / activeDeals.length,
+          activeDeals.reduce((sum, deal) => sum + deal.prob, 0) / activeDeals.length
         )
       : 0;
   const stalledPressure = deals.negotiation.length + Math.max(0, deals.proposal.length - 1);
 
+  // Create Deal
   const createLiveDeal = async (stageId: DealStage) => {
     if (contacts.length === 0) {
       toast.warning("No contacts available", {
@@ -301,15 +789,13 @@ export function PipelinePage() {
         toast.success("New deal created", {
           description: "A live CRM deal was added to the lead stage.",
         });
-      } catch (createError) {
-        console.error(createError);
+      } catch {
         toast.error("Could not create deal", {
           description: "The live deal record could not be created right now.",
         });
       } finally {
         setIsCreating(false);
       }
-
       return;
     }
 
@@ -321,6 +807,8 @@ export function PipelinePage() {
       value: "$29,800",
       close: "Apr 15",
       prob: 34,
+      priority: "medium" as const,
+      tags: ["Enterprise"],
     };
 
     setDeals((previous) => ({
@@ -339,17 +827,17 @@ export function PipelinePage() {
       try {
         await createLiveDeal(stageId);
         toast.info("Deal added to stage", {
-          description: `A live CRM deal was added to ${stageConfigs.find((stage) => stage.id === stageId)?.label ?? "that stage"}.`,
+          description: `A live CRM deal was added to ${
+            stageConfigs.find((stage) => stage.id === stageId)?.label ?? "that stage"
+          }.`,
         });
-      } catch (createError) {
-        console.error(createError);
+      } catch {
         toast.error("Could not add deal", {
           description: "The live stage record could not be created right now.",
         });
       } finally {
         setIsCreating(false);
       }
-
       return;
     }
 
@@ -362,6 +850,8 @@ export function PipelinePage() {
       value: formatCurrencyValue(template.amount),
       close: formatDueLabel(addDays(template.closeInDays)),
       prob: template.probability,
+      priority: "medium" as const,
+      tags: [],
     };
 
     setDeals((previous) => ({
@@ -370,89 +860,34 @@ export function PipelinePage() {
     }));
 
     toast.info("Deal added to stage", {
-      description: `${nextDeal.company} is now in ${stageConfigs.find((stage) => stage.id === stageId)?.label ?? stageId}.`,
+      description: `${nextDeal.company} is now in ${
+        stageConfigs.find((stage) => stage.id === stageId)?.label ?? stageId
+      }.`,
     });
   };
 
-  const handleDealOptions = (dealId: number | string) => {
-    const activeDeal = allDeals.find((deal) => deal.id === dealId);
-    if (!activeDeal) {
-      return;
-    }
+  const handleDealClick = (deal: DealCard) => {
+    toast.success(deal.company, {
+      description: `${deal.contact} is attached to ${deal.value} and closes ${deal.close}.`,
+    });
+  };
 
+  const handleDealOptions = (deal: DealCard, e: React.MouseEvent) => {
+    e.stopPropagation();
     toast("Deal quick actions", {
-      description: `${activeDeal.title} is closing ${activeDeal.close} with ${activeDeal.prob}% probability.`,
-    });
-  };
-
-  const handleAIDealSuggestion = async () => {
-    if (dataSource === "live") {
-      setIsCreating(true);
-      try {
-        await createLiveDeal("qualified");
-        toast.success("AI-assisted deal created", {
-          description:
-            "CRMP suggested a qualified stage entry with a stronger amount and close-date baseline.",
-        });
-      } catch (createError) {
-        console.error(createError);
-        toast.error("Could not create suggested deal", {
-          description: "The AI-assisted live deal could not be created right now.",
-        });
-      } finally {
-        setIsCreating(false);
-      }
-
-      return;
-    }
-
-    toast.info("AI suggestion ready", {
-      description:
-        "The next step is wiring model-assisted stage, value, and probability suggestions into the live pipeline form.",
-    });
-  };
-
-  const handleCreateFromInbox = () => {
-    toast("Conversation handoff ready", {
-      description:
-        "Unread conversations can be turned into deals with source, contact, and urgency carried over automatically.",
-    });
-  };
-
-  const handleLaunchAutomation = () => {
-    toast.success("Automation template prepared", {
-      description:
-        "This pipeline can auto-create follow-ups, legal review tasks, and stage reminders from the deal action menu.",
-    });
-  };
-
-  const handleOpenDeal = (dealId: number | string) => {
-    const activeDeal = allDeals.find((entry) => entry.id === dealId);
-    if (!activeDeal) {
-      return;
-    }
-
-    toast.success(activeDeal.company, {
-      description: `${activeDeal.contact} is attached to ${activeDeal.value} and closes ${activeDeal.close}.`,
+      description: `${deal.title} is closing ${deal.close} with ${deal.prob}% probability.`,
     });
   };
 
   const visibleStages = stageConfigs.filter(
-    (stage) => stage.id !== "closed_lost" || deals.closed_lost.length > 0,
-  );
-  const topStage =
-    [...visibleStages]
-      .sort((left, right) => deals[right.id].length - deals[left.id].length)[0] ?? stageConfigs[0];
-  const topStageValue = deals[topStage.id].reduce(
-    (sum, deal) => sum + parseCurrencyLabel(deal.value),
-    0,
+    (stage) => stage.id !== "closed_lost" || deals.closed_lost.length > 0
   );
 
   return (
     <div className="space-y-4 pb-6">
       <PageHeader
-        title="Deals workspace"
-        description="Keep the pipeline tighter, denser, and easier to move so stage pressure and forecast risk are visible without oversized cards."
+        title="Deals Pipeline"
+        description="Drag and drop deals between stages. Track progress, value, and probability in real-time."
         meta={
           <>
             <StatusBadge tone={sourceTone}>{sourceLabel}</StatusBadge>
@@ -466,30 +901,29 @@ export function PipelinePage() {
             label="Create Deal"
             icon={Plus}
             variant="success"
-            onClick={() => {
-              void handleNewDeal();
-            }}
+            onClick={() => void handleNewDeal()}
             disabled={isCreating}
             items={[
               {
                 label: "AI-suggest amount and stage",
-                description: "Use current pipeline patterns to start with a stronger value, stage, and probability.",
+                description:
+                  "Use current pipeline patterns to start with a stronger value, stage, and probability.",
                 icon: Bot,
-                onSelect: () => {
-                  void handleAIDealSuggestion();
-                },
+                onSelect: () => {},
               },
               {
                 label: "Convert inbox thread",
-                description: "Create a deal from an active conversation and keep the communication history attached.",
+                description:
+                  "Create a deal from an active conversation and keep the communication history attached.",
                 icon: Sparkles,
-                onSelect: handleCreateFromInbox,
+                onSelect: () => {},
               },
               {
                 label: "Launch deal automation",
-                description: "Attach reminders, stakeholder follow-ups, and stage-based automations from day one.",
+                description:
+                  "Attach reminders, stakeholder follow-ups, and stage-based automations from day one.",
                 icon: Zap,
-                onSelect: handleLaunchAutomation,
+                onSelect: () => {},
               },
             ]}
           />
@@ -502,6 +936,7 @@ export function PipelinePage() {
         </SurfaceCard>
       ) : null}
 
+      {/* Metrics */}
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           label="Pipeline value"
@@ -528,272 +963,77 @@ export function PipelinePage() {
           label="Avg confidence"
           value={`${averageProbability}%`}
           delta={`${stalledPressure} deals need movement`}
-          icon={Clock3}
+          icon={Clock}
           tone="success"
         />
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_18rem]">
-        <div className="space-y-4">
-          <SurfaceCard tone="subtle" className="gap-0 overflow-hidden">
-            <div className="border-b border-border/75 px-4 py-3.5">
-              <p className="text-sm font-semibold text-foreground">Stage summary</p>
-              <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                Keep every stage readable before you open the full board.
-              </p>
-            </div>
+      {/* Search and Filters */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative flex-1 max-w-md">
+          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search deals by company, contact, or tags..."
+            className="pl-10"
+          />
+        </div>
+        <Button
+          variant={showFilters ? "default" : "outline"}
+          size="sm"
+          onClick={() => setShowFilters(!showFilters)}
+        >
+          <Filter className="size-4 mr-2" />
+          Filters
+          {showFilters ? <ChevronUp className="size-4 ml-2" /> : <ChevronDown className="size-4 ml-2" />}
+        </Button>
+      </div>
 
-            <div className="flex gap-2 overflow-x-auto p-3">
-              {visibleStages.map((stage) => {
-                const stageDeals = deals[stage.id] ?? [];
-                const stageTotal = stageDeals.reduce(
-                  (sum, deal) => sum + parseCurrencyLabel(deal.value),
-                  0,
-                );
-
-                return (
-                  <button
-                    key={stage.id}
-                    onClick={() => void handleAddDealToStage(stage.id)}
-                    className="min-w-[11rem] rounded-[calc(var(--radius)+1px)] border border-border/80 bg-surface-strong/70 px-3 py-3 text-left transition-colors hover:border-primary/18 hover:bg-surface-strong"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <span className={`size-2 rounded-full ${toneClasses[stage.tone]}`} />
-                        <p className="text-sm font-semibold text-foreground">{stage.label}</p>
-                      </div>
-                      <StatusBadge tone={badgeTone[stage.tone]}>{stageDeals.length}</StatusBadge>
-                    </div>
-                    <p className="mt-2 font-metric text-sm font-semibold text-foreground">
-                      {formatCurrencyValue(stageTotal)}
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Add a deal directly into this lane.
-                    </p>
-                  </button>
-                );
-              })}
-            </div>
-          </SurfaceCard>
-
-          <div className="overflow-x-auto pb-2">
-            <div className="flex min-w-max gap-3">
-              {visibleStages.map((stage, stageIndex) => {
-                const stageDeals = deals[stage.id] || [];
-                const stageTotal = stageDeals.reduce(
-                  (sum, deal) => sum + parseCurrencyLabel(deal.value),
-                  0,
-                );
-
-                return (
-                  <SurfaceCard
-                    key={stage.id}
-                    tone="subtle"
-                    className="w-[16.5rem] min-w-[16.5rem] gap-0 overflow-hidden"
-                  >
-                    <div className="flex items-start justify-between border-b border-border/75 px-3.5 py-3">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className={`size-2 rounded-full ${toneClasses[stage.tone]}`} />
-                          <p className="text-sm font-semibold text-foreground">{stage.label}</p>
-                          <StatusBadge tone={badgeTone[stage.tone]}>{stageDeals.length}</StatusBadge>
-                        </div>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {formatCurrencyValue(stageTotal)} total value
-                        </p>
-                      </div>
-                      <Button
-                        variant={buttonVariant[stage.tone]}
-                        size="icon"
-                        className="rounded-[0.95rem]"
-                        onClick={() => void handleAddDealToStage(stage.id)}
-                        disabled={isCreating}
-                      >
-                        <Plus className="size-4" />
-                      </Button>
-                    </div>
-
-                    <div className="max-h-[34rem] space-y-2.5 overflow-y-auto p-3">
-                      {stageDeals.map((deal, index) => (
-                        <motion.div
-                          key={deal.id}
-                          initial={{ opacity: 0, y: 8 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: stageIndex * 0.04 + index * 0.02 }}
-                          onClick={() => handleOpenDeal(deal.id)}
-                          onKeyDown={(event) => {
-                            if (event.key === "Enter" || event.key === " ") {
-                              event.preventDefault();
-                              handleOpenDeal(deal.id);
-                            }
-                          }}
-                          role="button"
-                          tabIndex={0}
-                          className="w-full cursor-pointer rounded-[calc(var(--radius)+1px)] border border-border/80 bg-surface-strong/70 p-3 text-left transition-[transform,border-color,background-color] duration-200 hover:-translate-y-0.5 hover:border-primary/18 hover:bg-surface-strong"
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <p className="truncate text-sm font-semibold text-foreground">
-                                {deal.company}
-                              </p>
-                              <p className="mt-1 truncate text-xs text-muted-foreground">
-                                {deal.title}
-                              </p>
-                              <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
-                                <User className="size-3.5" />
-                                {deal.contact}
-                              </div>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="rounded-[0.95rem]"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                handleDealOptions(deal.id);
-                              }}
-                            >
-                              <MoreHorizontal className="size-4" />
-                            </Button>
-                          </div>
-
-                          <div className="mt-3 grid gap-2">
-                            <div className="flex items-center justify-between gap-2 text-xs">
-                              <div className="flex items-center gap-1.5 font-metric font-semibold text-foreground">
-                                <DollarSign className="size-3.5" />
-                                {deal.value}
-                              </div>
-                              <div className="flex items-center gap-1.5 text-muted-foreground">
-                                <Calendar className="size-3.5" />
-                                {deal.close}
-                              </div>
-                            </div>
-
-                            <div>
-                              <div className="flex items-center justify-between text-[0.72rem] text-muted-foreground">
-                                <span>Close confidence</span>
-                                <span className="font-metric text-foreground">{deal.prob}%</span>
-                              </div>
-                              <div className="mt-1.5 h-1.5 rounded-full bg-background/60">
-                                <div
-                                  className={cn(
-                                    "h-1.5 rounded-full",
-                                    stage.tone === "success"
-                                      ? "bg-success"
-                                      : stage.tone === "warning"
-                                        ? "bg-warning"
-                                        : stage.tone === "danger"
-                                          ? "bg-danger"
-                                          : stage.tone === "primary"
-                                            ? "bg-primary"
-                                            : "bg-info",
-                                  )}
-                                  style={{ width: `${deal.prob}%` }}
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </div>
-                  </SurfaceCard>
-                );
-              })}
-            </div>
+      {/* Pipeline Board */}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="overflow-x-auto pb-4">
+          <div className="flex gap-4 min-w-max">
+            {visibleStages.map((stage) => (
+              <StageColumn
+                key={stage.id}
+                stage={stage}
+                deals={deals[stage.id]}
+                onAddDeal={() => void handleAddDealToStage(stage.id)}
+                onDealClick={handleDealClick}
+                onDealOptions={handleDealOptions}
+                isCreating={isCreating}
+                searchQuery={searchQuery}
+              />
+            ))}
           </div>
         </div>
 
-        <div className="grid gap-4">
-          <SurfaceCard tone="accent" className="gap-3 border-primary/16 p-3">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="size-4 text-primary" />
-              <p className="text-sm font-semibold text-foreground">Pipeline pressure</p>
+        <DragOverlay dropAnimation={dropAnimation}>
+          {activeDeal && activeStage ? (
+            <div className="cursor-grabbing">
+              <SortableDealCard
+                deal={activeDeal}
+                stageId={activeStage}
+                onClick={() => {
+                  toast.info("Release to drop the deal in a new stage");
+                }}
+                onOptions={(e) => {
+                  e.stopPropagation();
+                  toast.info("Options available after dropping the deal");
+                }}
+                isOverlay
+              />
             </div>
-            <div className="rounded-[calc(var(--radius)-2px)] border border-border/80 bg-surface-strong/70 px-3 py-3">
-              <p className="text-[0.64rem] font-semibold tracking-[0.18em] text-primary/80 uppercase">
-                Most active lane
-              </p>
-              <p className="mt-1 text-sm font-semibold text-foreground">{topStage.label}</p>
-              <p className="mt-1 font-metric text-sm text-muted-foreground">
-                {formatCurrencyValue(topStageValue)} across {deals[topStage.id].length} deals
-              </p>
-            </div>
-            <div className="rounded-[calc(var(--radius)-2px)] border border-border/80 bg-surface-strong/70 px-3 py-3">
-              <p className="text-[0.64rem] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
-                Risk note
-              </p>
-              <p className="mt-1 text-sm text-foreground">
-                {stalledPressure > 0
-                  ? `${stalledPressure} high-intent deals need a faster next step.`
-                  : "The board is moving cleanly right now."}
-              </p>
-            </div>
-          </SurfaceCard>
-
-          <SurfaceCard tone="subtle" className="gap-3 p-3">
-            <div>
-              <p className="text-sm font-semibold text-foreground">AI-assisted moves</p>
-              <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                Keep the highest-value shortcuts visible instead of hiding them behind the board.
-              </p>
-            </div>
-
-            <button
-              onClick={() => void handleAIDealSuggestion()}
-              className="flex items-start gap-3 rounded-[calc(var(--radius)-2px)] border border-border/80 bg-surface-strong/70 p-3 text-left transition-colors hover:border-primary/18 hover:bg-surface-strong"
-            >
-              <div className="flex size-9 items-center justify-center rounded-[0.9rem] border border-primary/18 bg-primary/12 text-primary">
-                <Sparkles className="size-4" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-foreground">Suggest a stronger deal</p>
-                <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                  Start with AI-suggested stage, amount, and confidence instead of a blank form.
-                </p>
-              </div>
-            </button>
-
-            <button
-              onClick={handleCreateFromInbox}
-              className="flex items-start gap-3 rounded-[calc(var(--radius)-2px)] border border-border/80 bg-surface-strong/70 p-3 text-left transition-colors hover:border-primary/18 hover:bg-surface-strong"
-            >
-              <div className="flex size-9 items-center justify-center rounded-[0.9rem] border border-info/18 bg-info-soft text-info">
-                <Briefcase className="size-4" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-foreground">Promote from inbox</p>
-                <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                  Convert active conversations into deals with source and urgency already attached.
-                </p>
-              </div>
-            </button>
-          </SurfaceCard>
-
-          <SurfaceCard tone="subtle" className="gap-3 p-3">
-            <div>
-              <p className="text-sm font-semibold text-foreground">Automation hooks</p>
-              <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                Stage changes should trigger reminders, review tasks, and no-response workflows.
-              </p>
-            </div>
-
-            <div className="rounded-[calc(var(--radius)-2px)] border border-border/80 bg-surface-strong/70 px-3 py-3">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="size-4 text-warning" />
-                <p className="text-sm font-semibold text-foreground">Follow-up risk</p>
-              </div>
-              <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                Proposal and negotiation stages are the best place to automate nudges and internal alerts.
-              </p>
-            </div>
-
-            <Button variant="outline" onClick={handleLaunchAutomation}>
-              <Zap className="size-4" />
-              Prepare automation
-            </Button>
-          </SurfaceCard>
-        </div>
-      </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
     </div>
   );
 }

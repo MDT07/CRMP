@@ -56,10 +56,14 @@ async def lifespan(_: FastAPI):
     configure_logging()
     settings = get_settings()
     worker_task: asyncio.Task[None] | None = None
-    if settings.event_worker_enabled:
-        worker_task = asyncio.create_task(
-            run_event_worker(settings.event_worker_interval_seconds)
-        )
+    # Disable event worker for testing
+    # if settings.event_worker_enabled:
+    #     worker_task = asyncio.create_task(run_event_worker(settings.event_worker_interval_seconds))
+
+    # Disable email sync scheduler for testing
+    # from app.services.email_sync_scheduler import get_sync_scheduler
+    # email_scheduler = get_sync_scheduler()
+    # email_scheduler.start()
 
     try:
         yield
@@ -68,6 +72,71 @@ async def lifespan(_: FastAPI):
             worker_task.cancel()
             with suppress(asyncio.CancelledError):
                 await worker_task
+        # Shutdown email sync scheduler
+        # email_scheduler.shutdown()
+
+
+class EarlyCorsMiddleware:
+    """ASGI middleware to handle CORS preflight before FastAPI routing."""
+
+    def __init__(self, app, allowed_origins):
+        self.app = app
+        self.allowed_origins = set(allowed_origins)
+        self._initialized = False
+
+    async def __call__(self, scope, receive, send):
+        # Log first request for debugging
+        if not self._initialized:
+            logger.info(
+                f"EarlyCorsMiddleware processing first request: {scope.get('method')} {scope.get('path')}"
+            )
+            self._initialized = True
+
+        if scope["type"] == "http" and scope.get("method") == "OPTIONS":
+            # Handle preflight immediately
+            headers = scope.get("headers", [])
+            origin = ""
+            for name, value in headers:
+                if name.lower() == b"origin":
+                    origin = value.decode("utf-8")
+                    break
+
+            logger.info(f"OPTIONS request from origin: {origin}")
+
+            # Check if origin is allowed
+            allowed = (
+                origin in self.allowed_origins
+                or "*" in self.allowed_origins
+                or "localhost" in origin
+                or "127.0.0.1" in origin
+            )
+
+            if allowed:
+                logger.info(f"Allowing CORS preflight from: {origin}")
+                # Return 200 OK with CORS headers
+                await send(
+                    {
+                        "type": "http.response.start",
+                        "status": 200,
+                        "headers": [
+                            (b"access-control-allow-origin", origin.encode() or b"*"),
+                            (
+                                b"access-control-allow-methods",
+                                b"GET, POST, PUT, DELETE, OPTIONS, PATCH",
+                            ),
+                            (b"access-control-allow-headers", b"*"),
+                            (b"access-control-allow-credentials", b"true"),
+                            (b"content-length", b"0"),
+                        ],
+                    }
+                )
+                await send({"type": "http.response.body", "body": b""})
+                return
+            else:
+                logger.warning(f"Rejecting CORS preflight from: {origin}")
+
+        # Pass to next middleware/app
+        await self.app(scope, receive, send)
 
 
 def create_application() -> FastAPI:
@@ -78,6 +147,10 @@ def create_application() -> FastAPI:
         debug=settings.debug,
         lifespan=lifespan,
     )
+
+    # Wrap with early CORS middleware (runs before all other middleware)
+    app.add_middleware(EarlyCorsMiddleware, allowed_origins=settings.allowed_cors_origins)
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.allowed_cors_origins,

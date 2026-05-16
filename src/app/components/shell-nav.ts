@@ -1,14 +1,14 @@
 import type { LucideIcon } from "lucide-react";
 import {
   BarChart3,
-  Building2,
+  Bot,
   CheckSquare,
   FolderKanban,
   GitBranch,
   LayoutDashboard,
   LifeBuoy,
   Megaphone,
-  MessageSquare,
+  Mail,
   Radar,
   Settings,
   Users,
@@ -23,83 +23,108 @@ export interface ShellNavItem {
   badge?: string;
 }
 
-export const primaryNavItems: ShellNavItem[] = [
+export interface NavGroup {
+  label: string;
+  items: ShellNavItem[];
+}
+
+export const navGroups: NavGroup[] = [
   {
-    path: "/",
-    icon: LayoutDashboard,
-    label: "Growth",
-    description: "Home and performance",
+    label: "Workspace",
+    items: [
+      {
+        path: "/",
+        icon: LayoutDashboard,
+        label: "Home",
+        description: "Dashboard and overview",
+      },
+      {
+        path: "/inbox",
+        icon: Mail,
+        label: "Inbox",
+        description: "Unified communication",
+        badge: "3",
+      },
+      {
+        path: "/tasks",
+        icon: CheckSquare,
+        label: "Tasks",
+        description: "Priorities and owners",
+      },
+    ],
   },
   {
-    path: "/clients",
-    icon: Users,
-    label: "Contacts",
-    description: "People and companies",
+    label: "Sales",
+    items: [
+      {
+        path: "/pipeline",
+        icon: GitBranch,
+        label: "Pipeline",
+        description: "Deals and forecasting",
+      },
+      {
+        path: "/clients",
+        icon: Users,
+        label: "Contacts",
+        description: "People and companies",
+      },
+    ],
   },
   {
-    path: "/accounts",
-    icon: Building2,
-    label: "Accounts",
-    description: "Health and expansion plans",
+    label: "Insights",
+    items: [
+      {
+        path: "/analytics",
+        icon: BarChart3,
+        label: "Analytics",
+        description: "Reports and performance",
+      },
+      {
+        path: "/forecast",
+        icon: Radar,
+        label: "Forecast",
+        description: "Commit and scenarios",
+      },
+    ],
   },
   {
-    path: "/pipeline",
-    icon: GitBranch,
-    label: "Deals",
-    description: "Pipeline and forecasting",
-  },
-  {
-    path: "/projects",
-    icon: FolderKanban,
-    label: "Projects",
-    description: "Post-win delivery",
-  },
-  {
-    path: "/messages",
-    icon: MessageSquare,
-    label: "Inbox",
-    description: "Unified conversations",
-    badge: "3",
-  },
-  {
-    path: "/tasks",
-    icon: CheckSquare,
-    label: "Tasks",
-    description: "Priorities and owners",
+    label: "Operations",
+    items: [
+      {
+        path: "/automations",
+        icon: Zap,
+        label: "AI & Automations",
+        description: "Rules and Swarm AI",
+      },
+      {
+        path: "/crm-agent",
+        icon: Bot,
+        label: "CRM Agent",
+        description: "AI copilot for CRM tasks",
+      },
+      {
+        path: "/projects",
+        icon: FolderKanban,
+        label: "Projects",
+        description: "Post-win delivery",
+      },
+      {
+        path: "/campaigns",
+        icon: Megaphone,
+        label: "Campaigns",
+        description: "Lifecycle plays",
+      },
+      {
+        path: "/service",
+        icon: LifeBuoy,
+        label: "Service",
+        description: "SLA queue and retention",
+      },
+    ],
   },
 ];
 
-export const secondaryNavItems: ShellNavItem[] = [
-  {
-    path: "/automations",
-    icon: Zap,
-    label: "Automations",
-    description: "Rules and follow-ups",
-  },
-  {
-    path: "/campaigns",
-    icon: Megaphone,
-    label: "Campaigns",
-    description: "Lifecycle and outbound plays",
-  },
-  {
-    path: "/forecast",
-    icon: Radar,
-    label: "Forecast",
-    description: "Commit and scenario planning",
-  },
-  {
-    path: "/analytics",
-    icon: BarChart3,
-    label: "Analytics",
-    description: "Forecasts and reports",
-  },
-  {
-    path: "/service",
-    icon: LifeBuoy,
-    label: "Service",
-    description: "SLA queue and retention",
-  },
+export const bottomNavItems: ShellNavItem[] = [
   {
     path: "/settings",
     icon: Settings,
@@ -107,6 +132,14 @@ export const secondaryNavItems: ShellNavItem[] = [
     description: "Preferences and integrations",
   },
 ];
+
+export const primaryNavItems: ShellNavItem[] = navGroups
+  .find((group) => group.label === "Workspace")
+  ?.items || [];
+
+export const secondaryNavItems: ShellNavItem[] = navGroups
+  .find((group) => group.label === "Operations")
+  ?.items || [];
 
 const pageMetaEntries = [
   {
@@ -133,6 +166,11 @@ const pageMetaEntries = [
     match: (pathname: string) => pathname.startsWith("/projects"),
     title: "Projects Workspace",
     description: "Deliver won deals with clear owner accountability and milestone control.",
+  },
+  {
+    match: (pathname: string) => pathname.startsWith("/inbox"),
+    title: "Email Inbox",
+    description: "View and manage your synced email conversations.",
   },
   {
     match: (pathname: string) => pathname.startsWith("/messages"),
@@ -170,9 +208,9 @@ const pageMetaEntries = [
     description: "Protect customer health with SLA triage, escalations, and resolution playbooks.",
   },
   {
-    match: (pathname: string) => pathname.startsWith("/ai-assistant"),
-    title: "AI Workspace",
-    description: "Use the copilot to summarize context, draft replies, and suggest next steps.",
+    match: (pathname: string) => pathname.startsWith("/crm-agent"),
+    title: "CRM Agent",
+    description: "AI-powered CRM assistant for contact analysis, deal scoring, email drafting, and strategic guidance.",
   },
   {
     match: (pathname: string) => pathname.startsWith("/settings"),
@@ -203,7 +241,7 @@ const knownAppPaths = [
   "/forecast",
   "/analytics",
   "/service",
-  "/ai-assistant",
+  "/crm-agent",
   "/settings",
 ] as const;
 

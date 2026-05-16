@@ -85,6 +85,11 @@ class AssistantMessageResponse(BaseModel):
     mode: str = "fallback"
 
 
+class NematronChatRequest(BaseModel):
+    message: str = Field(min_length=1)
+    session_id: Optional[str] = None
+
+
 class AssistantStatusResponse(BaseModel):
     mode: str = "fallback"
     reachable: bool = False
@@ -294,3 +299,8 @@ class ProposalBulkDecisionItem(BaseModel):
 
 class ProposalBulkDecisionResponse(BaseModel):
     results: list[ProposalBulkDecisionItem] = Field(default_factory=list)
+
+
+class AssistantMessageResponse(BaseModel):
+    content: str
+    mode: Literal["llm", "fallback"]

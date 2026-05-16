@@ -15,9 +15,9 @@ import {
   Menu,
   MoonStar,
   Plus,
+  Settings2,
   SunMedium,
   Search,
-  Settings2,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -54,10 +54,7 @@ import { Input } from "./ui/input";
 import { cn } from "./ui/utils";
 
 interface TopBarProps {
-  onToggleAI: () => void;
-  aiPanelOpen: boolean;
   onOpenNavigation: () => void;
-  showAIToggle: boolean;
 }
 
 interface HeaderPulse {
@@ -179,10 +176,7 @@ function getHeaderPulse(pathname: string, workspace: Workspace): HeaderPulse {
 }
 
 export function TopBar({
-  onToggleAI,
-  aiPanelOpen,
   onOpenNavigation,
-  showAIToggle,
 }: TopBarProps) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -432,7 +426,7 @@ export function TopBar({
 
   return (
     <>
-      <header className="sticky top-0 z-30 border-b border-border/80 bg-canvas-strong/95 backdrop-blur">
+      <header className="sticky top-0 z-30 border-b border-border bg-canvas-strong">
         <div className="flex h-14 items-center gap-2 px-3 sm:px-4 lg:px-5">
         <Button
           variant="ghost"
@@ -446,7 +440,7 @@ export function TopBar({
 
         <button
           onClick={() => navigate("/")}
-          className="flex min-w-0 items-center gap-2.5 rounded-[calc(var(--radius)-3px)] px-1.5 py-1 transition-colors hover:bg-accent/70"
+          className="flex min-w-0 items-center gap-2.5 rounded-[calc(var(--radius)-3px)] px-1.5 py-1 transition-colors hover:bg-accent"
           aria-label="Go to CRMP by EmirCo home"
         >
           <BrandMark size="sm" className="hidden size-8 rounded-[0.8rem] shadow-none sm:flex" />
@@ -472,7 +466,7 @@ export function TopBar({
               onBlur={() => setSearchOpen(false)}
               onKeyDown={handleSearchKeyDown}
               placeholder={`Search ${meta.title.toLowerCase()}, deals, contacts, or conversations...`}
-              className="h-8 rounded-[calc(var(--radius)-4px)] border-border/80 bg-surface-muted pl-9 pr-14 text-[0.8rem] shadow-none focus-visible:ring-0"
+              className="h-8 rounded-lg border-border bg-surface-muted pl-9 pr-14 text-sm shadow-none focus-visible:ring-0"
             />
             <button
               type="button"
@@ -480,14 +474,14 @@ export function TopBar({
                 setSearchOpen(true);
                 searchInputRef.current?.focus();
               }}
-              className="absolute top-1/2 right-2 inline-flex -translate-y-1/2 items-center gap-1 rounded-full border border-border/80 bg-background px-2 py-0.5 font-mono text-[0.62rem] text-muted-foreground transition-colors hover:border-primary/20 hover:text-foreground"
+              className="absolute top-1/2 right-2 inline-flex -translate-y-1/2 items-center gap-1 rounded-full border border-border bg-background px-2 py-0.5 font-mono text-xs text-muted-foreground transition-colors hover:border-primary hover:text-foreground"
               aria-label="Open quick search"
             >
               <Command className="size-3" />K
             </button>
 
             {searchOpen ? (
-              <div className="absolute top-[calc(100%+0.4rem)] left-0 z-40 w-full rounded-[calc(var(--radius)+4px)] border border-border/80 bg-popover p-1.5 shadow-[var(--shadow-elevated)]">
+              <div className="absolute top-[calc(100%+0.4rem)] left-0 z-40 w-full rounded-xl border border-border bg-popover p-1.5 shadow-[var(--shadow-elevated)]">
                 {searchResults.length > 0 ? (
                   <div className="grid gap-1">
                     {searchResults.map((item, index) => (
@@ -495,29 +489,29 @@ export function TopBar({
                         key={item.path}
                         onMouseDown={(event) => event.preventDefault()}
                         onClick={() => navigateFromSearch(item.path)}
-                        className={cn(
-                          "flex items-center justify-between gap-3 rounded-[calc(var(--radius)-4px)] border border-transparent px-2.5 py-2 text-left transition-colors",
+                          className={cn(
+                          "flex items-center justify-between gap-3 rounded-lg border border-transparent px-2.5 py-2 text-left transition-colors",
                           index === activeSearchIndex
-                            ? "border-primary/20 bg-primary/10"
-                            : "hover:border-border/80 hover:bg-surface-strong/85",
+                            ? "border-primary bg-primary"
+                            : "hover:border-border hover:bg-surface-strong",
                         )}
                       >
                         <div className="min-w-0">
                           <p className="truncate text-[0.78rem] font-semibold text-foreground">
                             {item.label}
                           </p>
-                          <p className="truncate text-[0.7rem] text-muted-foreground">
+                          <p className="truncate text-xs text-muted-foreground">
                             {item.description}
                           </p>
                         </div>
-                        <span className="shrink-0 rounded-full border border-border/80 bg-surface-muted px-2 py-0.5 text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                        <span className="shrink-0 rounded-full border border-border bg-surface-muted px-2 py-0.5 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                           {item.scope}
                         </span>
                       </button>
                     ))}
                   </div>
                 ) : (
-                  <p className="px-2.5 py-2 text-[0.76rem] text-muted-foreground">
+                  <p className="px-2.5 py-2 text-sm text-muted-foreground">
                     No matching workspace sections.
                   </p>
                 )}
@@ -529,23 +523,10 @@ export function TopBar({
         <div className="ml-auto flex items-center gap-2">
           <div className="hidden xl:flex items-center gap-1.5">
             <StatusBadge tone={connectionTone}>{connectionLabel}</StatusBadge>
-            <span className="inline-flex h-7 items-center rounded-full border border-border/80 bg-surface-muted px-2.5 text-[0.66rem] font-medium text-muted-foreground">
+            <span className="inline-flex h-7 items-center rounded-full border border-border bg-surface-muted px-2.5 text-[0.66rem] font-medium text-muted-foreground">
               {pulse.label}: {pulse.value}
             </span>
           </div>
-
-          {showAIToggle ? (
-            <Button
-              variant={aiPanelOpen ? "default" : "outline"}
-              size="sm"
-              onClick={onToggleAI}
-            >
-              <Bot className="size-4" />
-              <span className="hidden lg:inline">
-                {aiPanelOpen ? "Collapse Copilot" : "Open Copilot"}
-              </span>
-            </Button>
-          ) : null}
 
           <SmartActionButton
             label="Quick Add"
@@ -587,6 +568,16 @@ export function TopBar({
             variant="ghost"
             size="icon"
             className="relative"
+            onClick={() => navigate("/crm-agent")}
+            aria-label="Open CRM Agent"
+          >
+            <Bot className="size-4" />
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            className="relative"
             onClick={toggleTheme}
             aria-label={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
           >
@@ -612,19 +603,19 @@ export function TopBar({
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="group flex items-center gap-2.5 rounded-[calc(var(--radius)-3px)] border border-border/80 bg-surface-muted/90 px-2.5 py-1.5 transition-colors hover:border-primary/20 hover:bg-accent">
-                <div className="flex size-8 items-center justify-center rounded-[calc(var(--radius)-4px)] border border-primary/18 bg-primary/12 font-metric text-[0.82rem] font-semibold text-primary">
+              <button className="group flex items-center gap-2.5 rounded-[calc(var(--radius)-3px)] border border-border bg-surface-muted px-2.5 py-1.5 transition-colors hover:border-primary hover:bg-accent">
+                <div className="flex size-8 items-center justify-center rounded-lg border border-primary bg-primary font-metric text-[0.82rem] font-semibold text-primary-foreground">
                   {userInitial}
                 </div>
                 <div className="hidden min-w-0 text-left lg:block">
-                  <p className="truncate text-[0.76rem] font-semibold text-foreground">
+                  <p className="truncate text-sm font-semibold text-foreground">
                     {user?.name ?? workspace.name}
                   </p>
                   <p className="truncate text-[0.66rem] text-muted-foreground">
                     {userSubtitle} · {PRESENCE_STYLES[presence].label}
                   </p>
                 </div>
-                <div className="hidden xl:flex items-center gap-1 rounded-full border border-border/80 bg-background px-2 py-0.5 text-[0.62rem] font-semibold text-muted-foreground">
+                <div className="hidden xl:flex items-center gap-1 rounded-full border border-border bg-background px-2 py-0.5 text-xs font-semibold text-muted-foreground">
                   <span className={cn("size-1.5 rounded-full", PRESENCE_STYLES[presence].dotClassName)} />
                   {workspace.stats.tasks} tasks
                 </div>
@@ -633,7 +624,7 @@ export function TopBar({
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="end"
-              className="w-72 rounded-[calc(var(--radius)-1px)] border-border/80 bg-popover p-1.5 shadow-[var(--shadow-elevated)]"
+              className="w-72 rounded-[calc(var(--radius)-1px)] border-border bg-popover p-1.5 shadow-[var(--shadow-elevated)]"
             >
               <DropdownMenuLabel className="space-y-2 px-2.5 py-2">
                 <p className="text-[0.82rem] font-semibold text-foreground">
@@ -641,16 +632,16 @@ export function TopBar({
                 </p>
                 <p className="text-[0.72rem] text-muted-foreground">{userMeta}</p>
                 <div className="grid grid-cols-2 gap-2 pt-1">
-                  <div className="rounded-[calc(var(--radius)-4px)] border border-border/80 bg-surface-muted px-2 py-1.5">
-                    <p className="text-[0.62rem] uppercase tracking-[0.12em] text-muted-foreground">
+                  <div className="rounded-lg border border-border bg-surface-muted px-2 py-1.5">
+                    <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
                       Open tasks
                     </p>
                     <p className="mt-1 text-[0.82rem] font-semibold text-foreground">
                       {workspace.stats.tasks}
                     </p>
                   </div>
-                  <div className="rounded-[calc(var(--radius)-4px)] border border-border/80 bg-surface-muted px-2 py-1.5">
-                    <p className="text-[0.62rem] uppercase tracking-[0.12em] text-muted-foreground">
+                  <div className="rounded-lg border border-border bg-surface-muted px-2 py-1.5">
+                    <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
                       Inbox load
                     </p>
                     <p className="mt-1 text-[0.82rem] font-semibold text-foreground">
@@ -681,24 +672,24 @@ export function TopBar({
                 <DropdownMenuShortcut>G S</DropdownMenuShortcut>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuLabel className="px-2.5 py-1 text-[0.68rem] uppercase tracking-[0.14em] text-muted-foreground">
+              <DropdownMenuLabel className="px-2.5 py-1 text-xs uppercase tracking-[0.14em] text-muted-foreground">
                 Availability
               </DropdownMenuLabel>
               <DropdownMenuRadioGroup
                 value={presence}
                 onValueChange={(value) => setPresence(value as UserPresence)}
               >
-                <DropdownMenuRadioItem value="available" className="text-[0.8rem]">
+                <DropdownMenuRadioItem value="available" className="text-sm">
                   {PRESENCE_STYLES.available.label}
                 </DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="focus" className="text-[0.8rem]">
+                <DropdownMenuRadioItem value="focus" className="text-sm">
                   {PRESENCE_STYLES.focus.label}
                 </DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="dnd" className="text-[0.8rem]">
+                <DropdownMenuRadioItem value="dnd" className="text-sm">
                   {PRESENCE_STYLES.dnd.label}
                 </DropdownMenuRadioItem>
               </DropdownMenuRadioGroup>
-              <p className="px-2.5 py-1.5 text-[0.68rem] text-muted-foreground">
+              <p className="px-2.5 py-1.5 text-xs text-muted-foreground">
                 {PRESENCE_STYLES[presence].detail}
               </p>
               {user || isGuest ? (
@@ -731,11 +722,11 @@ export function TopBar({
           }
         }}
       >
-        <DialogContent className="max-w-xl border-border/80 bg-canvas-strong p-0 shadow-[var(--shadow-elevated)]">
-          <div className="border-b border-border/80 px-5 py-4">
+        <DialogContent className="max-w-xl border-border bg-canvas-strong p-0 shadow-[var(--shadow-elevated)]">
+          <div className="border-b border-border px-5 py-4">
             <DialogHeader className="space-y-1 text-left">
               <DialogTitle className="text-base">Quick Task Capture</DialogTitle>
-              <DialogDescription className="text-[0.8rem] leading-5">
+              <DialogDescription className="text-sm leading-5">
                 Save a task from anywhere in the CRM. Uses live API when available, local queue when offline.
               </DialogDescription>
             </DialogHeader>
@@ -743,7 +734,7 @@ export function TopBar({
 
           <div className="grid gap-4 px-5 py-4">
             <div className="space-y-2">
-              <label className="text-[0.76rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              <label className="text-sm font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                 Task title
               </label>
               <Input
@@ -756,7 +747,7 @@ export function TopBar({
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <label className="text-[0.76rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                <label className="text-sm font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                   Client or context
                 </label>
                 <Input
@@ -766,7 +757,7 @@ export function TopBar({
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[0.76rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                <label className="text-sm font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                   Due date
                 </label>
                 <Input
@@ -787,7 +778,7 @@ export function TopBar({
             </div>
           </div>
 
-          <DialogFooter className="border-t border-border/80 px-5 py-4 sm:justify-between">
+          <DialogFooter className="border-t border-border px-5 py-4 sm:justify-between">
             <Button
               variant="ghost"
               onClick={closeQuickTaskDialog}

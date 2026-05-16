@@ -30,8 +30,8 @@ import {
   type AgentRun,
   type GroundedEvidenceItem,
   rejectAiProposal,
-  sendAgentRun,
   sendInboxCopilotMessage,
+  sendNemotronChatMessage,
   type AiAssistantStatusResponse,
   type AiRecommendationItem,
 } from "../lib/crm-api";
@@ -83,7 +83,7 @@ interface QuickAction {
   tone: Tone;
 }
 
-interface AIAssistantPanelProps {
+interface CRMAgentPanelProps {
   onClose?: () => void;
   mode?: "rail" | "page";
   collapsed?: boolean;
@@ -91,10 +91,10 @@ interface AIAssistantPanelProps {
 }
 
 const toneIconClasses: Record<Tone, string> = {
-  primary: "border-primary/18 bg-primary/12 text-primary",
-  info: "border-info/18 bg-info-soft text-info",
-  warning: "border-warning/18 bg-warning-soft text-warning",
-  success: "border-success/18 bg-success-soft text-success",
+  primary: "border-primary bg-primary text-primary",
+  info: "border-info bg-info-soft text-info",
+  warning: "border-warning bg-warning-soft text-warning",
+  success: "border-success bg-success-soft text-success",
 };
 
 interface LiveInsight {
@@ -172,12 +172,12 @@ function formatProposalDiff(proposal: AIActionProposal) {
     .join(" | ");
 }
 
-export function AIAssistantPanel({
+export function CRMAgentPanel({
   onClose,
   mode = "rail",
   collapsed = false,
   onToggleCollapsed,
-}: AIAssistantPanelProps) {
+}: CRMAgentPanelProps) {
   const location = useLocation();
   const {
     assistantSelection,
@@ -247,7 +247,7 @@ export function AIAssistantPanel({
     : null;
   const isGroundedInboxContext =
     canUseLiveAI &&
-    Boolean(inboxSelection) &&
+    inboxSelection &&
     inboxSelection.dataSource === "live" &&
     location.pathname.startsWith("/messages");
   const aiStatusTone =
@@ -283,7 +283,7 @@ export function AIAssistantPanel({
       ? connection === "fallback"
         ? "Live AI stays paused until the backend and local model are both reachable."
         : authState === "authenticated"
-          ? "Copilot is waiting for the workspace to finish syncing."
+          ? "CRMagent is waiting for the workspace to finish syncing."
           : "Sign in to a live workspace to unlock backend-driven AI."
       : isGroundedInboxContext
         ? "Inbox copilot is grounded in the selected thread and will keep every proposed CRM write pending until you approve it."
@@ -317,17 +317,15 @@ export function AIAssistantPanel({
   const agentSelectionPayload = {
     page: pageMeta.title,
     route: location.pathname,
-    data_source: canUseLiveAI
+    data_source: (canUseLiveAI
       ? "live"
       : connection === "loading"
         ? "loading"
-        : "preview",
+        : "preview") as "live" | "preview" | "loading",
     thread_id:
-      typeof selectionContext.threadId === "string"
-        ? selectionContext.threadId
-        : typeof selectionContext.thread_id === "string"
-          ? selectionContext.thread_id
-          : undefined,
+      (selectionContext as any)?.threadId ||
+      (selectionContext as any)?.thread_id ||
+      undefined,
     selected_entities: selectedEntities,
   };
   const availableModels = Array.from(
@@ -499,7 +497,7 @@ export function AIAssistantPanel({
         : run.status === "failed"
           ? run.error_detail ?? "Run failed."
           : "Run is still in progress.",
-    tone: run.status === "completed" ? "success" : run.status === "failed" ? "warning" : "info",
+    tone: (run.status === "completed" ? "success" : run.status === "failed" ? "warning" : "info") as "success" | "warning" | "info",
     statusLabel: run.status,
   }));
   const historyItems = [...runHistoryItems, ...messageHistoryItems].slice(0, 10);
@@ -633,13 +631,13 @@ export function AIAssistantPanel({
             setThreadProposals(detail.proposed_actions ?? []);
             setProposalSource("agent");
             setActiveTraceId(detail.run.trace_id);
-            if (detail.run.output_content) {
+            if (detail.run.output_content && typeof detail.run.output_content === 'string') {
               setMessages((previous) => [
                 ...previous,
                 {
                   id: Date.now() + attempt,
-                  role: "ai",
-                  content: detail.run.output_content,
+                  role: "ai" as const,
+                  content: detail.run.output_content as string,
                 },
               ]);
             }
@@ -728,7 +726,7 @@ export function AIAssistantPanel({
 
   const buildFallbackResponse = () => {
     if (connection === "fallback") {
-      return "The clearest move is still to work the inbox and high-intent deals first. When the backend is connected, I can turn that into live recommendations.";
+      return "The CRM AI service is currently in preview mode. Live AI responses will be available once the backend connection is restored.";
     }
 
     if (isGuest) {
@@ -763,18 +761,34 @@ export function AIAssistantPanel({
     setActiveTab("chat");
 
     if (!canUseLiveAI) {
-      setLastResponseMode("fallback");
-      window.setTimeout(() => {
+      // Even in fallback mode, try to use Nemotron AI for basic chat
+      try {
+        const response = await sendNemotronChatMessage(message);
+        setLastResponseMode(response.mode);
         setMessages((prev) => [
           ...prev,
           {
             id: Date.now() + 1,
             role: "ai",
-            content: buildFallbackResponse(),
+            content: response.content,
           },
         ]);
-      }, 700);
-      return;
+        return;
+      } catch (error) {
+        // If Nemotron fails, fall back to generic response
+        setLastResponseMode("fallback");
+        window.setTimeout(() => {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: Date.now() + 1,
+              role: "ai",
+              content: buildFallbackResponse(),
+            },
+          ]);
+        }, 700);
+        return;
+      }
     }
 
     setIsResponding(true);
@@ -801,24 +815,10 @@ export function AIAssistantPanel({
         setActiveTraceId(response.trace_id);
         outputContent = response.content;
       } else {
-        const response = await sendAgentRun({
-          prompt: message,
-          page: pageMeta.title,
-          tone: assistantTone,
-          model: requestedModel,
-          selection: agentSelectionPayload,
-          context: assistantContext,
-        });
-        setLastResponseMode(response.run.output_mode ?? "fallback");
-        setGroundedEvidence(response.run.evidence ?? []);
-        setThreadProposals(response.proposed_actions ?? []);
-        setProposalSource("agent");
-        setActiveTraceId(response.run.trace_id);
-        setAgentRuns((previous) => [
-          response.run,
-          ...previous.filter((run) => run.id !== response.run.id),
-        ]);
-        outputContent = response.run.output_content ?? buildFallbackResponse();
+        // Use Nemotron AI for direct chat
+        const response = await sendNemotronChatMessage(message);
+        setLastResponseMode(response.mode);
+        outputContent = response.content;
       }
 
       setMessages((prev) => [
@@ -839,7 +839,7 @@ export function AIAssistantPanel({
           content: buildFallbackResponse(),
         },
       ]);
-      toast.warning("Copilot fell back", {
+      toast.warning("CRMagent fell back", {
         description: getErrorMessage(error),
       });
     } finally {
@@ -1051,8 +1051,8 @@ export function AIAssistantPanel({
         <div className="flex flex-col items-center gap-3">
           <button
             onClick={onToggleCollapsed}
-            className="flex size-10 items-center justify-center rounded-[calc(var(--radius)-3px)] border border-primary/18 bg-primary/12 text-primary transition-colors hover:bg-primary/18"
-            aria-label="Expand AI assistant"
+            className="flex size-10 items-center justify-center rounded-[calc(var(--radius)-3px)] border border-primary bg-primary text-primary transition-colors hover:bg-primary"
+            aria-label="Expand CRM Agent"
           >
             <Bot className="size-4" />
           </button>
@@ -1068,7 +1068,7 @@ export function AIAssistantPanel({
                     onToggleCollapsed?.();
                     handleQuickAction(action);
                   }}
-                  className="flex size-8 items-center justify-center rounded-[calc(var(--radius)-4px)] border border-border/80 bg-card text-muted-foreground transition-colors hover:border-primary/18 hover:bg-surface-strong/85 hover:text-foreground"
+                  className="flex size-8 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground transition-colors hover:border-primary hover:bg-surface-strong hover:text-foreground"
                   aria-label={action.label}
                   title={action.label}
                 >
@@ -1083,7 +1083,7 @@ export function AIAssistantPanel({
           {contextStats.slice(1).map((stat) => (
             <div
               key={stat.label}
-              className="flex w-10 flex-col items-center rounded-[calc(var(--radius)-4px)] border border-border/80 bg-card px-1.5 py-1.5"
+              className="flex w-10 flex-col items-center rounded-lg border border-border bg-card px-1.5 py-1.5"
             >
               <span className="font-metric text-[0.72rem] font-semibold text-foreground">
                 {stat.value}
@@ -1097,9 +1097,9 @@ export function AIAssistantPanel({
           <Button
             variant="ghost"
             size="icon"
-            className="rounded-[calc(var(--radius)-4px)] bg-transparent text-muted-foreground"
+            className="rounded-lg bg-transparent text-muted-foreground"
             onClick={onToggleCollapsed}
-            aria-label="Open AI assistant"
+            aria-label="Open CRM Agent"
           >
             <ChevronRight className="size-4" />
           </Button>
@@ -1110,16 +1110,16 @@ export function AIAssistantPanel({
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-canvas-strong">
-      <div className="border-b border-border/80 px-3 py-3">
+      <div className="border-b border-border px-3 py-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2.5">
-              <div className="flex size-8 items-center justify-center rounded-[calc(var(--radius)-4px)] border border-primary/18 bg-primary/12 text-primary">
+              <div className="flex size-8 items-center justify-center rounded-lg border border-primary bg-primary text-primary">
                 <Bot className="size-4" />
               </div>
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <p className="truncate text-sm font-semibold text-foreground">Copilot</p>
+                  <p className="truncate text-sm font-semibold text-foreground">CRMagent</p>
                   <StatusBadge tone={connectionTone}>{connectionLabel}</StatusBadge>
                   <StatusBadge tone={aiStatusTone}>{aiStatusLabel}</StatusBadge>
                   {isGroundedInboxContext ? (
@@ -1143,7 +1143,7 @@ export function AIAssistantPanel({
               </StatusBadge>
             </div>
 
-            <p className="mt-2 text-[0.74rem] leading-5 text-muted-foreground">
+            <p className="mt-2 text-sm leading-5 text-muted-foreground">
               {workspaceSummary}
             </p>
             <p className="mt-1 text-[0.72rem] leading-5 text-muted-foreground">
@@ -1156,9 +1156,9 @@ export function AIAssistantPanel({
               <Button
                 variant="ghost"
                 size="icon"
-                className="rounded-[calc(var(--radius)-4px)]"
+                className="rounded-lg"
                 onClick={onToggleCollapsed}
-                aria-label="Minimize AI panel"
+                aria-label="Minimize CRM Agent panel"
               >
                 <ChevronRight className="size-4 rotate-180" />
               </Button>
@@ -1167,9 +1167,9 @@ export function AIAssistantPanel({
               <Button
                 variant="ghost"
                 size="icon"
-                className="rounded-[calc(var(--radius)-4px)]"
+                className="rounded-lg"
                 onClick={onClose}
-                aria-label="Close AI panel"
+                aria-label="Close CRM Agent panel"
               >
                 <X className="size-4" />
               </Button>
@@ -1183,8 +1183,8 @@ export function AIAssistantPanel({
         onValueChange={(value) => setActiveTab(value as DockTab)}
         className="min-h-0 flex-1 gap-0"
       >
-        <div className="border-b border-border/80 px-3 py-2">
-          <TabsList className="h-7 w-full rounded-[calc(var(--radius)-4px)] bg-surface-muted p-0.5">
+        <div className="border-b border-border px-3 py-2">
+          <TabsList className="h-7 w-full rounded-lg bg-surface-muted p-0.5">
             <TabsTrigger value="chat" className="text-[0.72rem]">
               Chat
             </TabsTrigger>
@@ -1202,17 +1202,17 @@ export function AIAssistantPanel({
 
         <TabsContent value="chat" className="min-h-0 flex-1">
           <div className="flex h-full min-h-0 flex-col">
-            <div className="border-b border-border/80 px-3 py-2.5">
+            <div className="border-b border-border px-3 py-2.5">
               <div className="grid grid-cols-3 gap-2">
                 {contextStats.map((stat) => (
                   <div
                     key={stat.label}
-                    className="rounded-[calc(var(--radius)-5px)] border border-border/80 bg-card px-2.5 py-2"
+                    className="rounded-[calc(var(--radius)-5px)] border border-border bg-card px-2.5 py-2"
                   >
-                    <p className="text-[0.58rem] font-semibold tracking-[0.14em] text-muted-foreground uppercase">
+                    <p className="text-xs font-semibold tracking-[0.14em] text-muted-foreground uppercase">
                       {stat.label}
                     </p>
-                    <p className="mt-1 truncate text-[0.8rem] font-semibold text-foreground">
+                    <p className="mt-1 truncate text-sm font-semibold text-foreground">
                       {stat.value}
                     </p>
                   </div>
@@ -1224,7 +1224,7 @@ export function AIAssistantPanel({
                   <button
                     key={action.id}
                     onClick={() => handleQuickAction(action)}
-                    className="rounded-full border border-border/80 bg-card px-2.5 py-1 text-[0.68rem] font-medium text-muted-foreground transition-colors hover:border-primary/18 hover:bg-surface-strong/85 hover:text-foreground"
+                    className="rounded-full border border-border bg-card px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:border-primary hover:bg-surface-strong hover:text-foreground"
                   >
                     {action.label}
                   </button>
@@ -1232,7 +1232,7 @@ export function AIAssistantPanel({
               </div>
             </div>
 
-            <div className="border-b border-border/80 px-3 py-2.5">
+            <div className="border-b border-border px-3 py-2.5">
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <p className="text-[0.78rem] font-semibold text-foreground">Current focus</p>
@@ -1243,7 +1243,7 @@ export function AIAssistantPanel({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="rounded-[calc(var(--radius)-4px)]"
+                  className="rounded-lg"
                   onClick={() => {
                     void handleRefreshInsights();
                   }}
@@ -1261,7 +1261,7 @@ export function AIAssistantPanel({
                     <button
                       key={insight.id}
                       onClick={() => handleInsightClick(insight.title)}
-                      className="w-full rounded-[calc(var(--radius)-4px)] border border-border/80 bg-card px-2.5 py-2 text-left transition-colors hover:border-primary/18 hover:bg-surface-strong/85"
+                      className="w-full rounded-lg border border-border bg-card px-2.5 py-2 text-left transition-colors hover:border-primary hover:bg-surface-strong"
                     >
                       <div className="flex items-start gap-2.5">
                         <div
@@ -1274,7 +1274,7 @@ export function AIAssistantPanel({
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-1.5">
-                            <p className="text-[0.8rem] font-semibold text-foreground">
+                            <p className="text-sm font-semibold text-foreground">
                               {insight.title}
                             </p>
                             <StatusBadge tone={insight.tone}>{insight.action}</StatusBadge>
@@ -1301,21 +1301,21 @@ export function AIAssistantPanel({
                 >
                   <div
                     className={cn(
-                      "max-w-[92%] rounded-[calc(var(--radius)-2px)] border px-3 py-2",
+                      "max-w-[92%] rounded-lg border px-3 py-2",
                       message.role === "user"
-                        ? "border-primary/18 bg-primary/12 text-foreground"
-                        : "border-border/80 bg-card text-foreground",
+                        ? "border-primary bg-primary text-foreground"
+                        : "border-border bg-card text-foreground",
                     )}
                   >
-                    <p className="text-[0.8rem] leading-6">{message.content}</p>
+                    <p className="text-sm leading-6">{message.content}</p>
                   </div>
                 </div>
               ))}
               {isResponding ? (
                 <div className="flex justify-start">
-                  <div className="max-w-[92%] rounded-[calc(var(--radius)-2px)] border border-border/80 bg-card px-3 py-2 text-foreground">
-                    <p className="text-[0.8rem] leading-6 text-muted-foreground">
-                      Copilot is thinking...
+                  <div className="max-w-[92%] rounded-lg border border-border bg-card px-3 py-2 text-foreground">
+                    <p className="text-sm leading-6 text-muted-foreground">
+                      CRMagent is thinking...
                     </p>
                   </div>
                 </div>
@@ -1323,7 +1323,7 @@ export function AIAssistantPanel({
             </div>
 
             {groundedEvidence.length > 0 ? (
-              <div className="border-t border-border/80 px-3 py-2.5">
+              <div className="border-t border-border px-3 py-2.5">
                 <div className="flex items-center justify-between gap-2">
                   <div>
                     <p className="text-[0.78rem] font-semibold text-foreground">
@@ -1342,10 +1342,10 @@ export function AIAssistantPanel({
                   {groundedEvidence.slice(0, 4).map((item) => (
                     <div
                       key={item.id}
-                      className="rounded-[calc(var(--radius)-4px)] border border-border/80 bg-card px-2.5 py-2"
+                      className="rounded-lg border border-border bg-card px-2.5 py-2"
                     >
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <p className="text-[0.8rem] font-semibold text-foreground">
+                        <p className="text-sm font-semibold text-foreground">
                           {item.title}
                         </p>
                         <StatusBadge tone="info">{item.source}</StatusBadge>
@@ -1359,8 +1359,8 @@ export function AIAssistantPanel({
               </div>
             ) : null}
 
-            <div className="border-t border-border/80 px-3 py-3">
-              <div className="flex items-center gap-2 rounded-[calc(var(--radius)-2px)] border border-border/80 bg-card p-2">
+            <div className="border-t border-border px-3 py-3">
+              <div className="flex items-center gap-2 rounded-lg border border-border bg-card p-2">
                 <Input
                   value={input}
                   onChange={(event) => setInput(event.target.value)}
@@ -1375,7 +1375,7 @@ export function AIAssistantPanel({
                 <Button
                   variant="outline"
                   size="icon"
-                  className="rounded-[calc(var(--radius)-4px)]"
+                  className="rounded-lg"
                   onClick={() => {
                     void handleQueueBackgroundRun();
                   }}
@@ -1385,7 +1385,7 @@ export function AIAssistantPanel({
                 </Button>
                 <Button
                   size="icon"
-                  className="rounded-[calc(var(--radius)-4px)]"
+                  className="rounded-lg"
                   onClick={() => {
                     void handleSend();
                   }}
@@ -1401,17 +1401,17 @@ export function AIAssistantPanel({
         <TabsContent value="actions" className="min-h-0 flex-1">
           <div className="flex h-full min-h-0 flex-col gap-3 px-3 py-3">
             <SurfaceCard tone="accent" className="gap-2.5 p-3">
-              <p className="text-[0.62rem] font-semibold tracking-[0.16em] text-primary/80 uppercase">
+              <p className="text-xs font-semibold tracking-[0.16em] text-primary uppercase">
                 Context-aware actions
               </p>
-              <p className="text-[0.8rem] text-foreground">
+              <p className="text-sm text-foreground">
                 {pageMeta.title} is active, so the dock is prioritizing actions that fit this workflow.
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {channelBadges.map((channel) => (
                   <span
                     key={channel}
-                    className="rounded-full border border-border/80 bg-card px-2 py-0.5 text-[0.6rem] font-semibold tracking-[0.14em] text-muted-foreground uppercase"
+                    className="rounded-full border border-border bg-card px-2 py-0.5 text-[0.6rem] font-semibold tracking-[0.14em] text-muted-foreground uppercase"
                   >
                     {channel}
                   </span>
@@ -1423,7 +1423,7 @@ export function AIAssistantPanel({
               <SurfaceCard tone="subtle" className="gap-2 p-3">
                 <div className="flex items-center justify-between gap-2">
                   <div>
-                    <p className="text-[0.8rem] font-semibold text-foreground">
+                    <p className="text-sm font-semibold text-foreground">
                       Approval-gated CRM actions
                     </p>
                     <p className="text-[0.72rem] text-muted-foreground">
@@ -1461,7 +1461,7 @@ export function AIAssistantPanel({
 
                 <div className="space-y-2">
                   {threadProposals.length === 0 ? (
-                    <div className="rounded-[calc(var(--radius)-4px)] border border-border/80 bg-card px-3 py-2.5">
+                    <div className="rounded-lg border border-border bg-card px-3 py-2.5">
                       <p className="text-[0.72rem] text-muted-foreground">
                         No pending actions for the selected thread yet.
                       </p>
@@ -1470,12 +1470,12 @@ export function AIAssistantPanel({
                     threadProposals.map((proposal) => (
                       <div
                         key={proposal.id}
-                        className="rounded-[calc(var(--radius)-4px)] border border-border/80 bg-card px-3 py-2.5"
+                        className="rounded-lg border border-border bg-card px-3 py-2.5"
                       >
                         <div className="flex flex-wrap items-start justify-between gap-2">
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-1.5">
-                              <p className="text-[0.8rem] font-semibold text-foreground">
+                              <p className="text-sm font-semibold text-foreground">
                                 {proposal.title}
                               </p>
                               <StatusBadge
@@ -1492,7 +1492,7 @@ export function AIAssistantPanel({
                               {proposal.detail ?? proposal.reasoning ?? "No extra detail."}
                             </p>
                             {formatProposalDiff(proposal) ? (
-                              <p className="mt-1 text-[0.68rem] leading-5 text-muted-foreground">
+                              <p className="mt-1 text-xs leading-5 text-muted-foreground">
                                 {formatProposalDiff(proposal)}
                               </p>
                             ) : null}
@@ -1538,12 +1538,12 @@ export function AIAssistantPanel({
                   <button
                     key={action.id}
                     onClick={() => handleQuickAction(action)}
-                    className="w-full rounded-[calc(var(--radius)-2px)] border border-border/80 bg-card p-3 text-left transition-colors hover:border-primary/18 hover:bg-surface-strong/85"
+                    className="w-full rounded-lg border border-border bg-card p-3 text-left transition-colors hover:border-primary hover:bg-surface-strong"
                   >
                     <div className="flex items-start gap-2.5">
                       <div
                         className={cn(
-                          "flex size-8 items-center justify-center rounded-[calc(var(--radius)-4px)] border",
+                          "flex size-8 items-center justify-center rounded-lg border",
                           toneIconClasses[action.tone],
                         )}
                       >
@@ -1574,7 +1574,7 @@ export function AIAssistantPanel({
               <div className="flex items-center gap-2">
                 <Clock3 className="size-4 text-muted-foreground" />
                 <div>
-                  <p className="text-[0.8rem] font-semibold text-foreground">
+                  <p className="text-sm font-semibold text-foreground">
                     Recent interaction history
                   </p>
                   <p className="text-[0.72rem] text-muted-foreground">
@@ -1589,11 +1589,11 @@ export function AIAssistantPanel({
                 <SurfaceCard
                   key={item.id}
                   tone="subtle"
-                  className="gap-2 border-border/80 bg-card p-3"
+                  className="gap-2 border-border bg-card p-3"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-[0.8rem] font-semibold text-foreground">{item.title}</p>
-                    <StatusBadge tone={item.tone}>{item.statusLabel}</StatusBadge>
+                    <p className="text-sm font-semibold text-foreground">{item.title}</p>
+                    <StatusBadge tone={item.tone as "success" | "warning" | "info" | "neutral" | "primary" | "danger"}>{item.statusLabel}</StatusBadge>
                   </div>
                   <p className="text-[0.72rem] leading-5 text-muted-foreground">{item.detail}</p>
                 </SurfaceCard>
@@ -1606,11 +1606,11 @@ export function AIAssistantPanel({
           <div className="flex h-full min-h-0 flex-col gap-3 px-3 py-3">
             <SurfaceCard tone="subtle" className="gap-3 p-3">
               <div className="flex items-center gap-2">
-                <div className="flex size-8 items-center justify-center rounded-[calc(var(--radius)-4px)] border border-border/80 bg-card text-muted-foreground">
+                <div className="flex size-8 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground">
                   <Settings2 className="size-4" />
                 </div>
                 <div>
-                  <p className="text-[0.8rem] font-semibold text-foreground">Assistant behavior</p>
+                  <p className="text-sm font-semibold text-foreground">Assistant behavior</p>
                   <p className="text-[0.72rem] text-muted-foreground">
                     Tune model choice, tone, and context behavior.
                   </p>
@@ -1618,10 +1618,10 @@ export function AIAssistantPanel({
               </div>
 
               <div className="grid gap-3">
-                <div className="rounded-[calc(var(--radius)-4px)] border border-border/80 bg-card px-3 py-2.5">
+                <div className="rounded-lg border border-border bg-card px-3 py-2.5">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <p className="text-[0.8rem] font-semibold text-foreground">AI runtime</p>
+                      <p className="text-sm font-semibold text-foreground">AI runtime</p>
                       <p className="text-[0.72rem] text-muted-foreground">{statusSummary}</p>
                     </div>
                     <StatusBadge tone={aiStatusTone}>{aiStatusLabel}</StatusBadge>
@@ -1629,7 +1629,7 @@ export function AIAssistantPanel({
                 </div>
 
                 <div className="space-y-1.5">
-                  <p className="text-[0.62rem] font-semibold tracking-[0.16em] text-muted-foreground uppercase">
+                  <p className="text-xs font-semibold tracking-[0.16em] text-muted-foreground uppercase">
                     Model
                   </p>
                   <Select value={selectedModel} onValueChange={setSelectedModel}>
@@ -1647,7 +1647,7 @@ export function AIAssistantPanel({
                 </div>
 
                 <div className="space-y-1.5">
-                  <p className="text-[0.62rem] font-semibold tracking-[0.16em] text-muted-foreground uppercase">
+                  <p className="text-xs font-semibold tracking-[0.16em] text-muted-foreground uppercase">
                     Tone
                   </p>
                   <Select value={assistantTone} onValueChange={setAssistantTone}>
@@ -1667,9 +1667,9 @@ export function AIAssistantPanel({
             </SurfaceCard>
 
             <SurfaceCard tone="subtle" className="gap-2.5 p-3">
-              <div className="flex items-center justify-between gap-3 rounded-[calc(var(--radius)-4px)] border border-border/80 bg-card px-3 py-2.5">
+              <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card px-3 py-2.5">
                 <div>
-                  <p className="text-[0.8rem] font-semibold text-foreground">Page-aware context</p>
+                  <p className="text-sm font-semibold text-foreground">Page-aware context</p>
                   <p className="text-[0.72rem] text-muted-foreground">
                     Use the current route and selected workflow context.
                   </p>
@@ -1680,9 +1680,9 @@ export function AIAssistantPanel({
                 />
               </div>
 
-              <div className="flex items-center justify-between gap-3 rounded-[calc(var(--radius)-4px)] border border-border/80 bg-card px-3 py-2.5">
+              <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card px-3 py-2.5">
                 <div>
-                  <p className="text-[0.8rem] font-semibold text-foreground">Smart actions</p>
+                  <p className="text-sm font-semibold text-foreground">Smart actions</p>
                   <p className="text-[0.72rem] text-muted-foreground">
                     Keep quick actions available across CRM records.
                   </p>
@@ -1697,7 +1697,7 @@ export function AIAssistantPanel({
             <SurfaceCard tone="accent" className="gap-2 p-3">
               <div className="flex items-center gap-2">
                 <Clock3 className="size-4 text-primary" />
-                <p className="text-[0.8rem] font-semibold text-foreground">Dock ready for live logic</p>
+                <p className="text-sm font-semibold text-foreground">Dock ready for live logic</p>
               </div>
               <p className="text-[0.72rem] leading-5 text-muted-foreground">
                 Model selection, history, route context, and workflow actions are structured so the copilot can grow without redesigning the shell again.

@@ -8,6 +8,7 @@ import {
   Key,
   Laptop,
   LogOut,
+  Mail,
   MoonStar,
   Palette,
   Plus,
@@ -53,6 +54,7 @@ import { buildPageAssistantSelection } from "../../lib/assistant-hooks";
 import { formatRelativeShort, getInitials } from "../../lib/crm-format";
 import { useCrmApp } from "../../providers/CrmProvider";
 import { useTheme } from "../../providers/ThemeProvider";
+import { EmailSettingsSection } from "../email/EmailSettingsSection";
 import {
   PageHeader,
   SmartActionButton,
@@ -75,6 +77,7 @@ const sections = [
   { id: "team", icon: Users, label: "Team Access" },
   { id: "notifications", icon: Bell, label: "Notifications" },
   { id: "security", icon: Shield, label: "Security" },
+  { id: "email", icon: Mail, label: "Email Accounts" },
   { id: "integrations", icon: Globe, label: "Integrations" },
   { id: "ai", icon: Zap, label: "AI Settings" },
   { id: "appearance", icon: Palette, label: "Appearance" },
@@ -89,9 +92,9 @@ const initialIntegrations = [
 ];
 
 const avatarThemes = [
-  "border-primary/18 bg-primary/12 text-primary",
-  "border-info/18 bg-info/12 text-info",
-  "border-warning/18 bg-warning/12 text-warning",
+  "border-primary bg-primary text-primary-foreground",
+  "border-info bg-info text-info-foreground",
+  "border-warning bg-warning text-warning-foreground",
 ] as const;
 
 const roleOptions: WorkspaceRole[] = [
@@ -752,11 +755,11 @@ export function SettingsPage() {
                 onClick={() => setActiveSection(id)}
                 className={`flex items-center gap-3 rounded-[calc(var(--radius)+2px)] border px-3 py-3 text-left transition-colors ${
                   activeSection === id
-                    ? "border-primary/20 bg-primary/15 text-foreground"
-                    : "border-transparent text-muted-foreground hover:border-border/80 hover:bg-surface-strong/70 hover:text-foreground"
+                    ? "border-primary bg-primary text-foreground"
+                    : "border-transparent text-muted-foreground hover:border-border hover:bg-surface-strong hover:text-foreground"
                 }`}
               >
-                <div className="flex size-9 items-center justify-center rounded-2xl border border-border/80 bg-surface-strong/70">
+                <div className="flex size-9 items-center justify-center rounded-2xl border border-border bg-surface-strong">
                   <Icon className="size-4" />
                 </div>
                 <span className="text-sm font-semibold">{label}</span>
@@ -764,7 +767,7 @@ export function SettingsPage() {
             ))}
           </div>
 
-          <div className="mt-2 rounded-[calc(var(--radius)+2px)] border border-border/80 bg-surface-strong/70 p-4">
+          <div className="mt-2 rounded-[calc(var(--radius)+2px)] border border-border bg-surface-strong p-4">
             <p className="text-sm font-semibold text-foreground">Admin posture</p>
             <p className="mt-1 text-sm text-muted-foreground">
               Solid access controls, fewer visual effects, and stronger operational clarity.
@@ -775,14 +778,14 @@ export function SettingsPage() {
         <SurfaceCard tone="accent" className="gap-0">
           {activeSection === "profile" ? (
             <>
-              <div className="border-b border-border/80 px-5 py-5">
+              <div className="border-b border-border px-5 py-5">
                 <p className="text-sm font-semibold text-foreground">Profile Settings</p>
                 <p className="text-sm text-muted-foreground">
                   Control the identity shown across your CRM workspace.
                 </p>
               </div>
               <div className="space-y-6 px-5 py-5">
-                <div className="flex flex-col gap-4 rounded-[calc(var(--radius)+6px)] border border-border/80 bg-surface-strong/70 p-5 sm:flex-row sm:items-center">
+                <div className="flex flex-col gap-4 rounded-[calc(var(--radius)+6px)] border border-border bg-surface-strong p-5 sm:flex-row sm:items-center">
                   <div
                     className={`flex size-18 items-center justify-center rounded-[2rem] border text-2xl font-semibold ${avatarThemes[avatarThemeIndex]}`}
                   >
@@ -812,7 +815,7 @@ export function SettingsPage() {
                   ].map((field) => (
                     <div
                       key={field.label}
-                      className="space-y-2 rounded-[calc(var(--radius)+2px)] border border-border/80 bg-surface-muted p-3"
+                      className="space-y-2 rounded-[calc(var(--radius)+2px)] border border-border bg-surface-muted p-3"
                     >
                       <label className="text-sm text-muted-foreground">
                         {field.label}
@@ -842,7 +845,7 @@ export function SettingsPage() {
 
           {activeSection === "team" ? (
             <>
-              <div className="border-b border-border/80 px-5 py-5">
+              <div className="border-b border-border px-5 py-5">
                 <p className="text-sm font-semibold text-foreground">Team Access</p>
                 <p className="text-sm text-muted-foreground">
                   Manage roles, module permissions, and recent admin activity from one control surface.
@@ -850,19 +853,19 @@ export function SettingsPage() {
               </div>
               <div className="space-y-6 px-5 py-5">
                 <div className="grid gap-4 md:grid-cols-3">
-                  <div className="rounded-[calc(var(--radius)+4px)] border border-border/80 bg-surface-strong/70 p-4">
+                  <div className="rounded-[calc(var(--radius)+4px)] border border-border bg-surface-strong p-4">
                     <p className="text-sm text-muted-foreground">Team members</p>
                     <p className="mt-2 font-metric text-2xl font-semibold text-foreground">
                       {adminConsole.teamMembers.length}
                     </p>
                   </div>
-                  <div className="rounded-[calc(var(--radius)+4px)] border border-border/80 bg-surface-strong/70 p-4">
+                  <div className="rounded-[calc(var(--radius)+4px)] border border-border bg-surface-strong p-4">
                     <p className="text-sm text-muted-foreground">Admins + managers</p>
                     <p className="mt-2 font-metric text-2xl font-semibold text-foreground">
                       {adminCount}
                     </p>
                   </div>
-                  <div className="rounded-[calc(var(--radius)+4px)] border border-border/80 bg-surface-strong/70 p-4">
+                  <div className="rounded-[calc(var(--radius)+4px)] border border-border bg-surface-strong p-4">
                     <p className="text-sm text-muted-foreground">Tracked activity</p>
                     <p className="mt-2 font-metric text-2xl font-semibold text-foreground">
                       {adminConsole.activityLogs.length}
@@ -870,7 +873,7 @@ export function SettingsPage() {
                   </div>
                 </div>
 
-                <div className="rounded-[calc(var(--radius)+6px)] border border-border/80 bg-surface-strong/70 p-4">
+                <div className="rounded-[calc(var(--radius)+6px)] border border-border bg-surface-strong p-4">
                   <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_12rem_11rem]">
                     <Input
                       className="sm:col-span-2 xl:col-span-1"
@@ -883,7 +886,7 @@ export function SettingsPage() {
                       onChange={(event) =>
                         setInviteRole(event.target.value as WorkspaceRole)
                       }
-                      className="h-10 rounded-[calc(var(--radius)-4px)] border border-border/80 bg-input-background px-3 text-sm text-foreground outline-none focus:border-ring"
+                      className="h-10 rounded-[calc(var(--radius)-4px)] border border-border bg-input-background px-3 text-sm text-foreground outline-none focus:border-ring"
                     >
                       {roleOptions.map((role) => (
                         <option key={role} value={role}>
@@ -909,8 +912,8 @@ export function SettingsPage() {
                 </div>
 
                 <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(340px,0.85fr)]">
-                  <div className="rounded-[calc(var(--radius)+6px)] border border-border/80 bg-surface-strong/70 overflow-hidden">
-                    <div className="flex items-center justify-between border-b border-border/80 px-4 py-4">
+                  <div className="rounded-[calc(var(--radius)+6px)] border border-border bg-surface-strong overflow-hidden">
+                    <div className="flex items-center justify-between border-b border-border px-4 py-4">
                       <div>
                         <p className="text-sm font-semibold text-foreground">Team roster</p>
                         <p className="text-sm text-muted-foreground">
@@ -923,7 +926,7 @@ export function SettingsPage() {
                     <div className="overflow-x-auto">
                       <Table className="min-w-[44rem]">
                         <TableHeader className="bg-surface-muted">
-                          <TableRow className="border-border/80 hover:bg-transparent">
+                          <TableRow className="border-border hover:bg-transparent">
                             <TableHead className="px-4 py-3 text-xs uppercase tracking-[0.18em] text-muted-foreground">Teammate</TableHead>
                             <TableHead className="px-4 py-3 text-xs uppercase tracking-[0.18em] text-muted-foreground">Role</TableHead>
                             <TableHead className="px-4 py-3 text-xs uppercase tracking-[0.18em] text-muted-foreground">Status</TableHead>
@@ -935,14 +938,14 @@ export function SettingsPage() {
                           {adminConsole.teamMembers.map((member) => (
                             <TableRow
                               key={member.id}
-                              className={`border-border/80 ${selectedMember?.id === member.id ? "bg-primary/12" : "bg-transparent"}`}
+                              className={`border-border ${selectedMember?.id === member.id ? "bg-primary" : "bg-transparent"}`}
                             >
                               <TableCell className="px-4 py-4">
                                 <button
                                   onClick={() => setSelectedMemberId(member.id)}
                                   className="flex min-w-[15rem] items-center gap-3 text-left"
                                 >
-                                  <div className="flex size-10 items-center justify-center rounded-2xl border border-primary/16 bg-primary/12 font-metric text-sm font-semibold text-primary">
+                                  <div className="flex size-10 items-center justify-center rounded-2xl border border-primary bg-primary font-metric text-sm font-semibold text-primary">
                                     {getInitials(member.name)}
                                   </div>
                                   <div className="min-w-0">
@@ -960,7 +963,7 @@ export function SettingsPage() {
                                       event.target.value as WorkspaceRole,
                                     )
                                   }
-                                  className="h-9 rounded-[calc(var(--radius)-6px)] border border-border/80 bg-input-background px-3 text-sm text-foreground outline-none focus:border-ring"
+                                  className="h-9 rounded-[calc(var(--radius)-6px)] border border-border bg-input-background px-3 text-sm text-foreground outline-none focus:border-ring"
                                 >
                                   {roleOptions.map((role) => (
                                     <option key={role} value={role}>
@@ -1003,7 +1006,7 @@ export function SettingsPage() {
                   </div>
 
                   <div className="space-y-4">
-                    <div className="rounded-[calc(var(--radius)+6px)] border border-border/80 bg-surface-strong/70 p-4">
+                    <div className="rounded-[calc(var(--radius)+6px)] border border-border bg-surface-strong p-4">
                       <div className="flex items-center justify-between gap-3">
                         <div>
                           <p className="text-sm font-semibold text-foreground">Permission matrix</p>
@@ -1023,7 +1026,7 @@ export function SettingsPage() {
                           permissionModuleMeta.map((module) => (
                             <div
                               key={module.id}
-                              className="rounded-[calc(var(--radius)+2px)] border border-border/80 bg-surface-muted p-3"
+                              className="rounded-[calc(var(--radius)+2px)] border border-border bg-surface-muted p-3"
                             >
                               <div className="flex items-center justify-between gap-3">
                                 <p className="text-sm font-semibold text-foreground">{module.label}</p>
@@ -1044,8 +1047,8 @@ export function SettingsPage() {
                                     }
                                     className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
                                       selectedMember.permissions[module.id] === level.id
-                                        ? "border-primary/20 bg-primary/12 text-primary"
-                                        : "border-border/80 bg-surface-strong/70 text-muted-foreground hover:text-foreground"
+                                        ? "border-primary bg-primary text-primary"
+                                        : "border-border bg-surface-strong text-muted-foreground hover:text-foreground"
                                     }`}
                                   >
                                     {level.label}
@@ -1062,7 +1065,7 @@ export function SettingsPage() {
                       </div>
                     </div>
 
-                    <div className="rounded-[calc(var(--radius)+6px)] border border-border/80 bg-surface-strong/70 p-4">
+                    <div className="rounded-[calc(var(--radius)+6px)] border border-border bg-surface-strong p-4">
                       <div className="flex items-center justify-between gap-3">
                         <div>
                           <p className="text-sm font-semibold text-foreground">Activity log</p>
@@ -1079,7 +1082,7 @@ export function SettingsPage() {
                         {adminConsole.activityLogs.map((entry) => (
                           <div
                             key={entry.id}
-                            className="rounded-[calc(var(--radius)+2px)] border border-border/80 bg-surface-muted p-3"
+                            className="rounded-[calc(var(--radius)+2px)] border border-border bg-surface-muted p-3"
                           >
                             <div className="flex items-center justify-between gap-3">
                               <p className="text-sm font-semibold text-foreground">
@@ -1104,7 +1107,7 @@ export function SettingsPage() {
 
           {activeSection === "notifications" ? (
             <>
-              <div className="border-b border-border/80 px-5 py-5">
+              <div className="border-b border-border px-5 py-5">
                 <p className="text-sm font-semibold text-foreground">
                   Notification Preferences
                 </p>
@@ -1116,7 +1119,7 @@ export function SettingsPage() {
                 {Object.entries(notifs).map(([key, value]) => (
                   <div
                     key={key}
-                    className="flex items-center justify-between rounded-[calc(var(--radius)+4px)] border border-border/80 bg-surface-strong/70 px-4 py-4"
+                    className="flex items-center justify-between rounded-[calc(var(--radius)+4px)] border border-border bg-surface-strong px-4 py-4"
                   >
                     <div>
                       <p className="text-sm font-semibold capitalize text-foreground">
@@ -1140,13 +1143,13 @@ export function SettingsPage() {
                       }
                       className={`flex h-7 w-12 items-center rounded-full border px-1 transition-colors ${
                         value
-                          ? "justify-end border-primary/20 bg-primary/12"
-                          : "justify-start border-border/80 bg-surface-muted"
+                          ? "justify-end border-primary bg-primary"
+                          : "justify-start border-border bg-surface-muted"
                       }`}
                     >
                       <span
                         className={`size-5 rounded-full ${
-                          value ? "bg-primary" : "bg-muted-foreground/45"
+                          value ? "bg-primary" : "bg-muted"
                         }`}
                       />
                     </button>
@@ -1158,7 +1161,7 @@ export function SettingsPage() {
 
           {activeSection === "security" ? (
             <>
-              <div className="border-b border-border/80 px-5 py-5">
+              <div className="border-b border-border px-5 py-5">
                 <p className="text-sm font-semibold text-foreground">Access Keys & Security</p>
                 <p className="text-sm text-muted-foreground">
                   Generate tokens, control module scope, and keep integration access visible.
@@ -1166,7 +1169,7 @@ export function SettingsPage() {
               </div>
               <div className="space-y-6 px-5 py-5">
                 <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
-                  <div className="rounded-[calc(var(--radius)+6px)] border border-border/80 bg-surface-strong/70 p-4">
+                  <div className="rounded-[calc(var(--radius)+6px)] border border-border bg-surface-strong p-4">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
                         <p className="text-sm font-semibold text-foreground">API keys</p>
@@ -1205,7 +1208,7 @@ export function SettingsPage() {
                     </div>
 
                     {apiKeysError ? (
-                      <div className="mt-4 rounded-[calc(var(--radius)+2px)] border border-danger/20 bg-danger/8 px-3 py-3 text-sm text-danger">
+                      <div className="mt-4 rounded-[calc(var(--radius)+2px)] border border-danger bg-danger px-3 py-3 text-sm text-danger">
                         {apiKeysError}
                       </div>
                     ) : null}
@@ -1214,7 +1217,7 @@ export function SettingsPage() {
                       {securityApiKeys.map((keyRecord) => (
                         <div
                           key={keyRecord.id}
-                          className="rounded-[calc(var(--radius)+4px)] border border-border/80 bg-surface-muted p-4"
+                          className="rounded-[calc(var(--radius)+4px)] border border-border bg-surface-muted p-4"
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div>
@@ -1276,7 +1279,7 @@ export function SettingsPage() {
                   </div>
 
                   <div className="space-y-4">
-                    <div className="rounded-[calc(var(--radius)+6px)] border border-border/80 bg-surface-strong/70 p-4">
+                    <div className="rounded-[calc(var(--radius)+6px)] border border-border bg-surface-strong p-4">
                       <p className="text-sm font-semibold text-foreground">Security posture</p>
                       <div className="mt-4 space-y-3">
                         {[
@@ -1286,8 +1289,8 @@ export function SettingsPage() {
                           "OAuth-ready channels are mapped for Gmail, Instagram, Slack, and future providers.",
                           "Activity logs make permission and key changes visible to admins.",
                         ].map((item) => (
-                          <div key={item} className="flex items-start gap-3 rounded-[calc(var(--radius)+2px)] border border-border/80 bg-surface-muted p-3">
-                            <div className="mt-0.5 flex size-8 items-center justify-center rounded-2xl border border-success/18 bg-success-soft text-success">
+                          <div key={item} className="flex items-start gap-3 rounded-[calc(var(--radius)+2px)] border border-border bg-surface-muted p-3">
+                            <div className="mt-0.5 flex size-8 items-center justify-center rounded-2xl border border-success bg-success-soft text-success">
                               <Check className="size-4" />
                             </div>
                             <p className="text-sm text-muted-foreground">{item}</p>
@@ -1296,7 +1299,7 @@ export function SettingsPage() {
                       </div>
                     </div>
 
-                    <div className="rounded-[calc(var(--radius)+6px)] border border-border/80 bg-surface-strong/70 p-4">
+                    <div className="rounded-[calc(var(--radius)+6px)] border border-border bg-surface-strong p-4">
                       <p className="text-sm font-semibold text-foreground">Recent security activity</p>
                       <div className="mt-4 space-y-3">
                         {adminConsole.activityLogs
@@ -1307,7 +1310,7 @@ export function SettingsPage() {
                           .map((entry) => (
                             <div
                               key={entry.id}
-                              className="rounded-[calc(var(--radius)+2px)] border border-border/80 bg-surface-muted p-3"
+                              className="rounded-[calc(var(--radius)+2px)] border border-border bg-surface-muted p-3"
                             >
                               <div className="flex items-center justify-between gap-3">
                                 <p className="text-sm font-semibold text-foreground">{entry.action}</p>
@@ -1328,9 +1331,21 @@ export function SettingsPage() {
             </>
           ) : null}
 
+          {activeSection === "email" ? (
+            <>
+              <div className="border-b border-border px-5 py-5">
+                <p className="text-sm font-semibold text-foreground">Email Accounts</p>
+                <p className="text-sm text-muted-foreground">
+                  Connect your email accounts to automatically sync conversations with your contacts.
+                </p>
+              </div>
+              <EmailSettingsSection />
+            </>
+          ) : null}
+
           {activeSection === "integrations" ? (
             <>
-              <div className="border-b border-border/80 px-5 py-5">
+              <div className="border-b border-border px-5 py-5">
                 <p className="text-sm font-semibold text-foreground">Integrations</p>
                 <p className="text-sm text-muted-foreground">
                   Centralize communication and automation by keeping channel auth visible and scoped.
@@ -1343,7 +1358,7 @@ export function SettingsPage() {
                   return (
                     <div
                       key={integration.name}
-                      className="rounded-[calc(var(--radius)+4px)] border border-border/80 bg-surface-strong/70 p-4"
+                      className="rounded-[calc(var(--radius)+4px)] border border-border bg-surface-strong p-4"
                     >
                       <div className="flex items-center justify-between gap-3">
                         <div>
@@ -1385,14 +1400,14 @@ export function SettingsPage() {
 
           {activeSection === "ai" ? (
             <>
-              <div className="border-b border-border/80 px-5 py-5">
+              <div className="border-b border-border px-5 py-5">
                 <p className="text-sm font-semibold text-foreground">AI Settings</p>
                 <p className="text-sm text-muted-foreground">
                   Decide how the assistant behaves across inbox, deals, and operational workflows.
                 </p>
               </div>
               <div className="grid gap-4 px-5 py-5 lg:grid-cols-2">
-                <div className="rounded-[calc(var(--radius)+4px)] border border-border/80 bg-surface-strong/70 p-4">
+                <div className="rounded-[calc(var(--radius)+4px)] border border-border bg-surface-strong p-4">
                   <p className="text-sm font-semibold text-foreground">Preferred model</p>
                   <div className="mt-4 space-y-2">
                     {["gpt-4.1-mini", "gpt-4.1", "gpt-4o-mini"].map((model) => (
@@ -1401,8 +1416,8 @@ export function SettingsPage() {
                         onClick={() => handleModelSelect(model)}
                         className={`flex w-full items-center justify-between rounded-[calc(var(--radius)+2px)] border px-3 py-3 text-sm font-medium transition-colors ${
                           aiModel === model
-                            ? "border-primary/20 bg-primary/12 text-foreground"
-                            : "border-border/80 bg-surface-muted text-muted-foreground hover:text-foreground"
+                            ? "border-primary bg-primary text-foreground"
+                            : "border-border bg-surface-muted text-muted-foreground hover:text-foreground"
                         }`}
                       >
                         {model}
@@ -1413,7 +1428,7 @@ export function SettingsPage() {
                 </div>
 
                 <div className="space-y-4">
-                  <div className="rounded-[calc(var(--radius)+4px)] border border-border/80 bg-surface-strong/70 p-4">
+                  <div className="rounded-[calc(var(--radius)+4px)] border border-border bg-surface-strong p-4">
                     <p className="text-sm font-semibold text-foreground">Assistant posture</p>
                     <div className="mt-4 space-y-3">
                       {[
@@ -1421,16 +1436,16 @@ export function SettingsPage() {
                         "Reply drafting can prefill follow-ups, summaries, and next-best actions.",
                         "Deal and contact actions can use AI suggestions before data is saved.",
                       ].map((item) => (
-                        <div key={item} className="rounded-[calc(var(--radius)+2px)] border border-border/80 bg-surface-muted px-4 py-3 text-sm text-muted-foreground">
+                        <div key={item} className="rounded-[calc(var(--radius)+2px)] border border-border bg-surface-muted px-4 py-3 text-sm text-muted-foreground">
                           {item}
                         </div>
                       ))}
                     </div>
                   </div>
 
-                  <div className="rounded-[calc(var(--radius)+4px)] border border-success/18 bg-success-soft p-4">
+                  <div className="rounded-[calc(var(--radius)+4px)] border border-success bg-success-soft p-4">
                     <div className="flex items-start gap-3">
-                      <div className="flex size-10 items-center justify-center rounded-2xl border border-success/18 bg-surface-strong/70 text-success">
+                      <div className="flex size-10 items-center justify-center rounded-2xl border border-success bg-surface-strong text-success">
                         <Bot className="size-4" />
                       </div>
                       <div>
@@ -1450,14 +1465,14 @@ export function SettingsPage() {
 
           {activeSection === "appearance" ? (
             <>
-              <div className="border-b border-border/80 px-5 py-5">
+              <div className="border-b border-border px-5 py-5">
                 <p className="text-sm font-semibold text-foreground">Appearance</p>
                 <p className="text-sm text-muted-foreground">
                   Shape the CRM experience across bright daylight and deep night operations.
                 </p>
               </div>
               <div className="grid gap-4 px-5 py-5 lg:grid-cols-2">
-                <div className="rounded-[calc(var(--radius)+4px)] border border-border/80 bg-surface-strong/70 p-4">
+                <div className="rounded-[calc(var(--radius)+4px)] border border-border bg-surface-strong p-4">
                   <p className="text-sm font-semibold text-foreground">Color mode</p>
                   <div className="mt-4 grid gap-2 sm:grid-cols-3">
                     {[
@@ -1486,8 +1501,8 @@ export function SettingsPage() {
                           onClick={() => setTheme(option.value)}
                           className={`flex items-center justify-between rounded-[calc(var(--radius)+2px)] border px-3 py-3 text-sm font-medium transition-colors ${
                             selected
-                              ? "border-primary/20 bg-primary/12 text-foreground"
-                              : "border-border/80 bg-surface-muted text-muted-foreground hover:text-foreground"
+                              ? "border-primary bg-primary text-foreground"
+                              : "border-border bg-surface-muted text-muted-foreground hover:text-foreground"
                           }`}
                         >
                           <span className="inline-flex items-center gap-2">
@@ -1505,7 +1520,7 @@ export function SettingsPage() {
                   </p>
                 </div>
 
-                <div className="rounded-[calc(var(--radius)+4px)] border border-border/80 bg-surface-strong/70 p-4">
+                <div className="rounded-[calc(var(--radius)+4px)] border border-border bg-surface-strong p-4">
                   <p className="text-sm font-semibold text-foreground">UI density</p>
                   <div className="mt-4 flex flex-wrap gap-2">
                     {["compact", "comfortable", "spacious"].map((density) => (
@@ -1514,8 +1529,8 @@ export function SettingsPage() {
                         onClick={() => setUiDensity(density)}
                         className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
                           uiDensity === density
-                            ? "border-primary/20 bg-primary/12 text-primary"
-                            : "border-border/80 bg-surface-muted text-muted-foreground hover:text-foreground"
+                            ? "border-primary bg-primary text-primary"
+                            : "border-border bg-surface-muted text-muted-foreground hover:text-foreground"
                         }`}
                       >
                         {density}
@@ -1524,7 +1539,7 @@ export function SettingsPage() {
                   </div>
                 </div>
 
-                <div className="rounded-[calc(var(--radius)+4px)] border border-border/80 bg-surface-strong/70 p-4">
+                <div className="rounded-[calc(var(--radius)+4px)] border border-border bg-surface-strong p-4">
                   <p className="text-sm font-semibold text-foreground">Chart emphasis</p>
                   <div className="mt-4 flex flex-wrap gap-2">
                     {["bold", "balanced", "subtle"].map((style) => (
@@ -1533,8 +1548,8 @@ export function SettingsPage() {
                         onClick={() => setChartStyle(style)}
                         className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
                           chartStyle === style
-                            ? "border-primary/20 bg-primary/12 text-primary"
-                            : "border-border/80 bg-surface-muted text-muted-foreground hover:text-foreground"
+                            ? "border-primary bg-primary text-primary"
+                            : "border-border bg-surface-muted text-muted-foreground hover:text-foreground"
                         }`}
                       >
                         {style}
@@ -1543,7 +1558,7 @@ export function SettingsPage() {
                   </div>
                 </div>
 
-                <div className="rounded-[calc(var(--radius)+4px)] border border-border/80 bg-surface-strong/70 p-4 lg:col-span-2">
+                <div className="rounded-[calc(var(--radius)+4px)] border border-border bg-surface-strong p-4 lg:col-span-2">
                   <p className="text-sm font-semibold text-foreground">Current design direction</p>
                   <p className="mt-2 text-sm text-muted-foreground">
                     CRMP now favors vibrant clarity: brighter accents, stronger chart contrast, cleaner hierarchy, and a reliable dark mode for late-session workflows.

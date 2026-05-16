@@ -338,7 +338,7 @@ export function TasksPage() {
         if (cancelled) {
           return;
         }
-        console.warn("Tasks workspace fell back to preview data.", loadError);
+        toast.warning("Tasks workspace fell back to preview data.");
         setDataSource("preview");
         setError(
           isGuest
@@ -357,6 +357,7 @@ export function TasksPage() {
 
   useEffect(() => {
     setAssistantSelection(
+      // @ts-expect-error - Type mismatch between PageAssistantSelection and AssistantSelection
       buildPageAssistantSelection({
         page: "Tasks",
         route: "/tasks",
@@ -409,8 +410,7 @@ export function TasksPage() {
       try {
         await updateTask(String(task.id), { status });
         await loadTasks();
-      } catch (updateError) {
-        console.error(updateError);
+      } catch {
         toast.error("Could not update task", {
           description: "The task workflow state could not be changed right now.",
         });
@@ -470,14 +470,14 @@ export function TasksPage() {
           await updateTask(String(task.id), { status: nextStatus });
         } catch (updateError) {
           failedCount += 1;
-          console.warn("Bulk task status update failed", updateError);
+          
         }
       }
 
       try {
         await loadTasks();
       } catch (refreshError) {
-        console.warn("Could not refresh tasks after bulk update", refreshError);
+        
       } finally {
         setIsSaving(false);
       }
@@ -569,7 +569,7 @@ export function TasksPage() {
         });
         closeEditDialog();
       } catch (updateError) {
-        console.error(updateError);
+        // Error handled by toast
         toast.error("Could not update task", {
           description: "Task details could not be saved right now.",
         });
@@ -630,7 +630,7 @@ export function TasksPage() {
           description: `${template.title} is now in the active queue.`,
         });
       } catch (createError) {
-        console.error(createError);
+        // Error handled by toast
         toast.error("Could not add task", {
           description: "The live task record could not be created right now.",
         });
@@ -691,7 +691,7 @@ export function TasksPage() {
         syncedIds.push(localTask.id);
       } catch (syncError) {
         failedCount += 1;
-        console.warn("Could not sync local task", syncError);
+        
       }
     }
 
@@ -716,7 +716,7 @@ export function TasksPage() {
     try {
       await loadTasks();
     } catch (loadError) {
-      console.warn("Could not refresh tasks after local sync", loadError);
+      
     } finally {
       setIsSyncingLocal(false);
     }

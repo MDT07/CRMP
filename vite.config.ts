@@ -15,6 +15,15 @@ export default defineConfig({
     },
   },
 
+  server: {
+    port: 5173,
+    host: true,
+    watch: {
+      // Ignore system directories that cause reload loops
+      ignored: ['**/.bg-shell/**', '**/node_modules/**', '**/.git/**'],
+    },
+  },
+
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
   assetsInclude: ['**/*.svg', '**/*.csv'],
 })
