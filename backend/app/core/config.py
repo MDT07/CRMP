@@ -19,12 +19,12 @@ class Settings(BaseSettings):
         default="replace-this-with-a-long-random-local-secret",
     )
     access_token_expire_minutes: int = 60 * 8
-    database_url: str = "postgresql+asyncpg://crmp:crmp@localhost:5432/crmp"
-    redis_url: str = "redis://localhost:6379/0"
+    database_url: str = "postgresql+asyncpg://crmp:crmp@127.0.0.1:5432/crmp"
+    redis_url: str = "redis://127.0.0.1:6379/0"
     allowed_cors_origins: Annotated[list[str], NoDecode] = [
-        "http://localhost:5173",
         "http://127.0.0.1:5173",
-        "http://localhost:5174",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174",
         "http://127.0.0.1:5174",
     ]
     session_cookie_name: str = "crmp_session"
@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     session_cookie_samesite: str = "lax"
     sql_echo: bool = False
     kafka_enabled: bool = False
-    kafka_bootstrap_servers: str = "localhost:9092"
+    kafka_bootstrap_servers: str = "127.0.0.1:9092"
     kafka_topic_events: str = "crmp.events"
     llm_base_url: str = "http://127.0.0.1:1234/v1"
     llm_api_key: str = ""
@@ -70,12 +70,12 @@ class Settings(BaseSettings):
     # Email OAuth Settings
     gmail_client_id: str = ""
     gmail_client_secret: str = ""
-    gmail_redirect_uri: str = "http://localhost:5173/email/oauth/callback"
+    gmail_redirect_uri: str = "http://127.0.0.1:5173/email/oauth/callback"
     outlook_client_id: str = ""
     outlook_client_secret: str = ""
-    outlook_redirect_uri: str = "http://localhost:5173/email/oauth/callback"
+    outlook_redirect_uri: str = "http://127.0.0.1:5173/email/oauth/callback"
     oauth_state_secret: str = "replace-with-random-secret-for-oauth-state"
-    frontend_url: str = "http://localhost:5173"
+    frontend_url: str = "http://127.0.0.1:5173"
 
     model_config = SettingsConfigDict(
         env_file=str(BACKEND_DIR / ".env"),

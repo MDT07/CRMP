@@ -10,7 +10,7 @@ export interface AssistantEntitySelection {
   entity_id: string;
 }
 
-export interface PageAssistantSelection {
+export interface PageAssistantSelection extends Record<string, unknown> {
   kind: "page-context";
   page: string;
   route: string;

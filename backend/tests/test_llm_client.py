@@ -7,7 +7,7 @@ from app.core.config import get_settings
 
 def test_local_llm_base_url_enables_client_without_api_key(monkeypatch) -> None:
     get_settings.cache_clear()
-    monkeypatch.setenv("LLM_BASE_URL", "http://localhost:1234/v1")
+    monkeypatch.setenv("LLM_BASE_URL", "http://127.0.0.1:1234/v1")
     monkeypatch.setenv("LLM_API_KEY", "")
 
     client = LLMClient()
@@ -91,22 +91,22 @@ def test_extract_model_ids_from_lmstudio_native_models_payload() -> None:
 
 def test_openai_base_url_is_normalized_from_native_api_base(monkeypatch) -> None:
     get_settings.cache_clear()
-    monkeypatch.setenv("LLM_BASE_URL", "http://localhost:1234/api/v1")
+    monkeypatch.setenv("LLM_BASE_URL", "http://127.0.0.1:1234/api/v1")
     monkeypatch.setenv("LLM_API_KEY", "")
 
     client = LLMClient()
 
-    assert client.openai_base_url == "http://localhost:1234/v1"
-    assert client.native_api_root == "http://localhost:1234"
-    assert "http://localhost:1234/api/v1/models" in client._status_urls()
-    assert "http://localhost:1234/v1/models" in client._status_urls()
+    assert client.openai_base_url == "http://127.0.0.1:1234/v1"
+    assert client.native_api_root == "http://127.0.0.1:1234"
+    assert "http://127.0.0.1:1234/api/v1/models" in client._status_urls()
+    assert "http://127.0.0.1:1234/v1/models" in client._status_urls()
 
     get_settings.cache_clear()
 
 
 def test_status_urls_respect_native_mode(monkeypatch) -> None:
     get_settings.cache_clear()
-    monkeypatch.setenv("LLM_BASE_URL", "http://localhost:1234/v1")
+    monkeypatch.setenv("LLM_BASE_URL", "http://127.0.0.1:1234/v1")
     monkeypatch.setenv("LM_STUDIO_API_MODE", "native")
     monkeypatch.setenv("LLM_API_KEY", "")
 
@@ -114,14 +114,14 @@ def test_status_urls_respect_native_mode(monkeypatch) -> None:
 
     assert client.use_native_api is True
     assert client.use_openai_compat is False
-    assert client._status_urls() == ["http://localhost:1234/api/v1/models"]
+    assert client._status_urls() == ["http://127.0.0.1:1234/api/v1/models"]
 
     get_settings.cache_clear()
 
 
 def test_status_urls_respect_openai_mode(monkeypatch) -> None:
     get_settings.cache_clear()
-    monkeypatch.setenv("LLM_BASE_URL", "http://localhost:1234/v1")
+    monkeypatch.setenv("LLM_BASE_URL", "http://127.0.0.1:1234/v1")
     monkeypatch.setenv("LM_STUDIO_API_MODE", "openai")
     monkeypatch.setenv("LLM_API_KEY", "")
 
@@ -130,16 +130,16 @@ def test_status_urls_respect_openai_mode(monkeypatch) -> None:
 
     assert client.use_native_api is False
     assert client.use_openai_compat is True
-    assert "http://localhost:1234/v1/models" in urls
-    assert "http://localhost:1234/api/v0/models" in urls
-    assert "http://localhost:1234/api/v1/models" not in urls
+    assert "http://127.0.0.1:1234/v1/models" in urls
+    assert "http://127.0.0.1:1234/api/v0/models" in urls
+    assert "http://127.0.0.1:1234/api/v1/models" not in urls
 
     get_settings.cache_clear()
 
 
 def test_invalid_lm_studio_api_mode_raises_validation_error(monkeypatch) -> None:
     get_settings.cache_clear()
-    monkeypatch.setenv("LLM_BASE_URL", "http://localhost:1234/v1")
+    monkeypatch.setenv("LLM_BASE_URL", "http://127.0.0.1:1234/v1")
     monkeypatch.setenv("LM_STUDIO_API_MODE", "invalid-mode")
 
     with pytest.raises(ValidationError):

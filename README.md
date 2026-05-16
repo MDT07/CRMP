@@ -129,14 +129,14 @@ workflow-specific overrides to `nvidia/nemotron-3-nano-4b`.
 
 - Postgres and Redis bind to `127.0.0.1` only in `backend/docker-compose.yml`.
 - Backend auth uses an httpOnly session cookie instead of storing bearer tokens in browser storage.
-- The AI stack is local-only by default. `LLM_BASE_URL` points to a localhost runtime and `LOCAL_AI_ONLY=true` blocks outbound model traffic.
+- The AI stack is local-only by default. `LLM_BASE_URL` points to a 127.0.0.1 runtime and `LOCAL_AI_ONLY=true` blocks outbound model traffic.
 - The inbox copilot returns grounded evidence and approval-gated CRM action proposals instead of performing writes directly.
 - Workspace API keys are now issued and revoked server-side instead of being generated and stored in the browser.
 - This setup assumes the host machine already has full-disk encryption enabled.
 
 To keep cookie auth reliable during local development, use the same hostname for both apps:
 
-- `http://localhost:5173` with `http://localhost:8000`
+- `http://127.0.0.1:5173` with `http://127.0.0.1:8000`
 - `http://127.0.0.1:5173` with `http://127.0.0.1:8000`
 
 ## Local ops

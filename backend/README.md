@@ -127,7 +127,7 @@ Notes:
   signed-in workspace.
 - Keep the frontend and backend on the same hostname during local development so
   the session cookie is accepted cleanly:
-  - `http://localhost:5173` with `http://localhost:8000`
+  - `http://127.0.0.1:5173` with `http://127.0.0.1:8000`
   - `http://127.0.0.1:5173` with `http://127.0.0.1:8000`
 
 ## Grounded inbox copilot

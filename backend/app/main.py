@@ -107,7 +107,7 @@ class EarlyCorsMiddleware:
             allowed = (
                 origin in self.allowed_origins
                 or "*" in self.allowed_origins
-                or "localhost" in origin
+                or "127.0.0.1" in origin
                 or "127.0.0.1" in origin
             )
 

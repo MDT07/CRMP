@@ -9,7 +9,7 @@ import httpx
 from app.core.config import get_settings
 
 LOCAL_LLM_HOSTS = {
-    "localhost",
+    "127.0.0.1",
     "127.0.0.1",
     "0.0.0.0",
     "host.docker.internal",
@@ -287,7 +287,7 @@ class LLMClient:
                 "loaded_models": [],
                 "detail": (
                     "Local AI only is enabled, so outbound model traffic is blocked until "
-                    "the configured runtime points to localhost."
+                    "the configured runtime points to 127.0.0.1."
                 ),
             }
 
