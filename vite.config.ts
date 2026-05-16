@@ -16,7 +16,7 @@ export default defineConfig({
   },
 
   server: {
-    port: 5173,
+    port: 3225,
     host: true,
     watch: {
       // Ignore system directories that cause reload loops

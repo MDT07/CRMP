@@ -22,10 +22,10 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://crmp:crmp@127.0.0.1:5432/crmp"
     redis_url: str = "redis://127.0.0.1:6379/0"
     allowed_cors_origins: Annotated[list[str], NoDecode] = [
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:5174",
-        "http://127.0.0.1:5174",
+        "http://127.0.0.1:3225",
+        "http://127.0.0.1:3225",
+        "http://127.0.0.1:3226",
+        "http://127.0.0.1:3226",
     ]
     session_cookie_name: str = "crmp_session"
     session_cookie_secure: bool = False
@@ -70,12 +70,12 @@ class Settings(BaseSettings):
     # Email OAuth Settings
     gmail_client_id: str = ""
     gmail_client_secret: str = ""
-    gmail_redirect_uri: str = "http://127.0.0.1:5173/email/oauth/callback"
+    gmail_redirect_uri: str = "http://127.0.0.1:3225/email/oauth/callback"
     outlook_client_id: str = ""
     outlook_client_secret: str = ""
-    outlook_redirect_uri: str = "http://127.0.0.1:5173/email/oauth/callback"
+    outlook_redirect_uri: str = "http://127.0.0.1:3225/email/oauth/callback"
     oauth_state_secret: str = "replace-with-random-secret-for-oauth-state"
-    frontend_url: str = "http://127.0.0.1:5173"
+    frontend_url: str = "http://127.0.0.1:3225"
 
     model_config = SettingsConfigDict(
         env_file=str(BACKEND_DIR / ".env"),

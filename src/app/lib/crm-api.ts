@@ -683,11 +683,11 @@ export class CrmApiError extends Error {
 
 function getDefaultApiBaseUrl() {
   if (typeof window === "undefined") {
-    return "http://127.0.0.1:8000/api/v1";
+    return "http://127.0.0.1:4680/api/v1";
   }
 
   const protocol = window.location.protocol === "https:" ? "https:" : "http:";
-  return `${protocol}//${window.location.hostname || "127.0.0.1"}:8000/api/v1`;
+  return `${protocol}//${window.location.hostname || "127.0.0.1"}:4680/api/v1`;
 }
 
 function getApiBaseUrl() {
