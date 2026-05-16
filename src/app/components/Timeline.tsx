@@ -498,11 +498,11 @@ export function Timeline({ entityId, entityType, className }: TimelineProps) {
             type: "email" as TimelineEventType,
             title: email.subject || "(No subject)",
             description: email.snippet || email.body_text?.substring(0, 150) || "",
-            timestamp: new Date(email.received_at || email.sent_at || email.created_at),
+            timestamp: new Date(email.received_at || email.sent_at || email.created_at || Date.now()),
             user: { name: email.from_name || email.from_email || "Unknown" },
             metadata: {
               from: email.from_email,
-              to: email.to_emails.map((r: { email: string }) => r.email).join(", "),
+              to: email.to_emails.join(", "),
               is_read: email.is_read,
               has_attachments: email.has_attachments,
             },

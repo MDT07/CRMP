@@ -1207,12 +1207,17 @@ export interface EmailMessage {
   from_email: string;
   from_name?: string;
   to_emails: string[];
+  cc_emails?: string[];
   body_text?: string;
   body_html?: string;
+  snippet?: string;
   is_read: boolean;
   is_sent: boolean;
   sent_at?: string;
   received_at?: string;
+  created_at?: string;
+  has_attachments?: boolean;
+  attachments?: { filename: string; size: number }[];
 }
 
 export interface EmailThread {
@@ -1256,6 +1261,7 @@ export async function syncEmails(accountId?: string) {
 export async function fetchEmailMessages(params?: {
   account_id?: string;
   contact_id?: string;
+  deal_id?: string;
   is_read?: boolean;
   limit?: number;
   offset?: number;

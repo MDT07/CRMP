@@ -89,12 +89,12 @@ export function EmailList({
     }
   };
 
-  const formatRecipients = (recipients: { email: string; name?: string | null }[]) => {
+  const formatRecipients = (recipients: string[]) => {
     if (recipients.length === 0) return "";
     if (recipients.length === 1) {
-      return recipients[0].name || recipients[0].email;
+      return recipients[0];
     }
-    return `${recipients[0].name || recipients[0].email} +${recipients.length - 1}`;
+    return `${recipients[0]} +${recipients.length - 1}`;
   };
 
   if (loading) {
@@ -267,25 +267,21 @@ export function EmailList({
                   <div className="flex gap-2">
                     <span className="w-12 text-muted-foreground">To:</span>
                     <span>
-                      {selectedEmail.to_emails
-                        .map((r) => r.name || r.email)
-                        .join(", ")}
+                      {selectedEmail.to_emails.join(", ")}
                     </span>
                   </div>
 
-                  {selectedEmail.cc_emails.length > 0 && (
+                  {selectedEmail.cc_emails && selectedEmail.cc_emails.length > 0 && (
                     <div className="flex gap-2">
                       <span className="w-12 text-muted-foreground">Cc:</span>
                       <span>
-                        {selectedEmail.cc_emails
-                          .map((r) => r.name || r.email)
-                          .join(", ")}
+                        {selectedEmail.cc_emails.join(", ")}
                       </span>
                     </div>
                   )}
                 </div>
 
-                {selectedEmail.has_attachments && (
+                {selectedEmail.has_attachments && selectedEmail.attachments && (
                   <div className="border-y py-4">
                     <p className="mb-2 text-sm font-medium">Attachments</p>
                     <div className="flex flex-wrap gap-2">

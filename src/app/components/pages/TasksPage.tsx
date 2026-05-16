@@ -357,7 +357,6 @@ export function TasksPage() {
 
   useEffect(() => {
     setAssistantSelection(
-      // @ts-expect-error - Type mismatch between PageAssistantSelection and AssistantSelection
       buildPageAssistantSelection({
         page: "Tasks",
         route: "/tasks",

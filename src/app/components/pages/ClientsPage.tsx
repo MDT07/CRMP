@@ -228,7 +228,6 @@ export function ClientsPage() {
 
   useEffect(() => {
     setAssistantSelection(
-      // @ts-expect-error - Type mismatch between PageAssistantSelection and AssistantSelection
       buildPageAssistantSelection({
         page: "Clients",
         route: "/clients",
