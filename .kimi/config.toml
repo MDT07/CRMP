@@ -1,0 +1,27 @@
+# Kimi CLI Configuration for CRMP Project
+# Place this file at: /Users/emirsemenov/Desktop/CRMP/.kimi/config.toml
+
+[general]
+name = "CRMP by EmirCo"
+description = "Next-generation CRM for modern revenue teams"
+work_dir = "."
+
+[agent]
+max_steps_per_turn = 50
+max_retries_per_step = 3
+
+[mcp]
+config_file = ".kimi/mcp.json"
+
+[skills]
+# Custom skills for CRMP development
+dirs = [".kimi/skills"]
+
+# Available skills:
+# - crmp-dev: Development workflows (test, build, start)
+# - crmp-component: Component generation patterns
+# - crmp-api: Backend API development
+# - crmp-design: Design system tokens
+# - crmp-testing: Testing helpers
+# - crmp-architecture: System architecture
+# - crmp-troubleshooting: Common issues
