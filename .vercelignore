@@ -3,3 +3,4 @@ LM Studio Repaired.app/
 .venv/
 backend/.venv/
 node_modules/
+backend/
