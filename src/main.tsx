@@ -52,8 +52,9 @@ createRoot(document.getElementById("root") ?? document.body).render(<App />);
 // Re-enable for production PWA
 if ("serviceWorker" in navigator && import.meta.env.PROD) {
   window.addEventListener("load", () => {
+    const swPath = import.meta.env.BASE_URL + "sw.js";
     navigator.serviceWorker
-      .register("/sw.js")
+      .register(swPath)
       .then((registration) => {
         console.log("[SW] Registered:", registration.scope);
       })

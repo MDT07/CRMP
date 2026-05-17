@@ -1,8 +1,10 @@
 const CACHE_NAME = 'crmp-v1';
+
+// Use relative paths for GitHub Pages compatibility
 const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/brand-mark.svg',
+  './',
+  './index.html',
+  './brand-mark.svg',
 ];
 
 // Install: Cache static assets
@@ -31,93 +33,24 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch: Cache-first strategy for static assets, network-first for API
+// Fetch: Network first, fallback to cache
 self.addEventListener('fetch', (event) => {
-  const { request } = event;
-  const url = new URL(request.url);
-
-  // Skip non-GET requests
-  if (request.method !== 'GET') {
-    return;
-  }
-
-  // API requests: Network first, fallback to cache
-  if (url.pathname.startsWith('/api/')) {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          // Cache successful API responses
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(request, clone);
-            });
-          }
-          return response;
-        })
-        .catch(() => {
-          return caches.match(request);
-        })
-    );
-    return;
-  }
-
-  // Static assets: Cache first, fallback to network
   event.respondWith(
-    caches.match(request).then((cached) => {
-      if (cached) {
-        return cached;
-      }
-      return fetch(request).then((response) => {
-        // Cache new static assets
-        if (response.ok && (
-          request.destination === 'script' ||
-          request.destination === 'style' ||
-          request.destination === 'image' ||
-          request.destination === 'font'
-        )) {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(request, clone);
-          });
+    fetch(event.request)
+      .then((response) => {
+        // Don't cache API requests or non-GET requests
+        if (event.request.method !== 'GET' || event.request.url.includes('/api/')) {
+          return response;
         }
+        // Clone and cache successful responses
+        const responseClone = response.clone();
+        caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, responseClone);
+        });
         return response;
-      });
-    })
-  );
-});
-
-// Background sync for offline form submissions
-self.addEventListener('sync', (event) => {
-  if (event.tag === 'sync-forms') {
-    event.waitUntil(syncFormSubmissions());
-  }
-});
-
-async function syncFormSubmissions() {
-  // Placeholder for form sync logic
-  // In production, this would sync queued form submissions
-  console.log('[SW] Syncing form submissions...');
-}
-
-// Push notifications (placeholder)
-self.addEventListener('push', (event) => {
-  const data = event.data?.json() ?? {};
-  event.waitUntil(
-    self.registration.showNotification(data.title ?? 'CRMP', {
-      body: data.body ?? 'New notification',
-      icon: '/brand-mark.svg',
-      badge: '/brand-mark.svg',
-      tag: data.tag ?? 'default',
-      requireInteraction: data.requireInteraction ?? false,
-    })
-  );
-});
-
-// Notification click handler
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
-  event.waitUntil(
-    self.clients.openWindow('/')
+      })
+      .catch(() => {
+        return caches.match(event.request);
+      })
   );
 });
