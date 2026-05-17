@@ -1,0 +1,5 @@
+LM Studio Repaired.app/
+.gitnexus/
+.venv/
+backend/.venv/
+node_modules/
