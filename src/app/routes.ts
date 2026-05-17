@@ -1,5 +1,5 @@
 import { lazy } from "react";
-import { createBrowserRouter } from "react-router";
+import { createHashRouter } from "react-router";
 import { AppRouteErrorBoundary } from "./components/AppRouteErrorBoundary";
 import { AuthRoute, ProtectedCrmRoute } from "./components/route-gates";
 import { Layout } from "./components/Layout";
@@ -51,7 +51,7 @@ const SettingsPage = lazy(() =>
 const NotFoundPage = lazy(() =>
   import("./components/pages/NotFoundPage").then((module) => ({ default: module.NotFoundPage }))
 );
-export const router = createBrowserRouter([
+export const router = createHashRouter([
   {
     Component: AuthRoute,
     ErrorBoundary: AppRouteErrorBoundary,
