@@ -63,3 +63,4 @@ models/*/
 .gitnexus
 LM Studio Repaired.app/
 *.app/
+.vercel

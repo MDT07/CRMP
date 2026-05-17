@@ -2,10 +2,7 @@ import { lazy } from "react";
 import { createBrowserRouter } from "react-router";
 import { AppRouteErrorBoundary } from "./components/AppRouteErrorBoundary";
 import { AuthRoute, ProtectedCrmRoute } from "./components/route-gates";
-
-const Layout = lazy(() =>
-  import("./components/Layout").then((module) => ({ default: module.Layout }))
-);
+import { Layout } from "./components/Layout";
 const Dashboard = lazy(() =>
   import("./components/Dashboard").then((module) => ({ default: module.Dashboard }))
 );

@@ -516,30 +516,43 @@ async function request<T>(
   } = {}
 ) {
   const hasBody = options.body !== undefined;
-  const response = await fetch(`${getApiBaseUrl()}${path}`, {
-    method: options.method ?? "GET",
-    headers: {
-      ...(hasBody ? { "Content-Type": "application/json" } : {}),
-      "X-Client-Trace-Id": options.clientTraceId ?? buildClientTraceId(),
-    },
-    credentials: "include",
-    body: hasBody ? JSON.stringify(options.body) : undefined,
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000);
 
-  const contentType = response.headers.get("content-type") ?? "";
-  const payload = contentType.includes("application/json")
-    ? await response.json()
-    : await response.text();
+  try {
+    const response = await fetch(`${getApiBaseUrl()}${path}`, {
+      method: options.method ?? "GET",
+      headers: {
+        ...(hasBody ? { "Content-Type": "application/json" } : {}),
+        "X-Client-Trace-Id": options.clientTraceId ?? buildClientTraceId(),
+      },
+      credentials: "include",
+      body: hasBody ? JSON.stringify(options.body) : undefined,
+      signal: controller.signal,
+    });
 
-  if (!response.ok) {
-    const detail =
-      typeof payload === "object" && payload !== null && "detail" in payload
-        ? String(payload.detail)
-        : response.statusText || "Request failed.";
-    throw new CrmApiError(detail, response.status);
+    const contentType = response.headers.get("content-type") ?? "";
+
+    if (!contentType.includes("application/json")) {
+      throw new TypeError(
+        `Expected JSON but received ${contentType || "unknown"}. The backend may be unavailable.`
+      );
+    }
+
+    const payload = await response.json();
+
+    if (!response.ok) {
+      const detail =
+        typeof payload === "object" && payload !== null && "detail" in payload
+          ? String(payload.detail)
+          : response.statusText || "Request failed.";
+      throw new CrmApiError(detail, response.status);
+    }
+
+    return payload as T;
+  } finally {
+    clearTimeout(timeout);
   }
-
-  return payload as T;
 }
 
 async function login(payload: LoginPayload) {
