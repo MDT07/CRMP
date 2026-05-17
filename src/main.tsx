@@ -26,6 +26,14 @@ function getInitialThemeMode(): ThemeMode {
   return "light";
 }
 
+// Handle GitHub Pages SPA redirect
+const params = new URLSearchParams(window.location.search);
+const redirect = params.get("redirect");
+if (redirect) {
+  const cleanRedirect = redirect.startsWith("/") ? redirect : "/" + redirect;
+  window.history.replaceState(null, "", cleanRedirect + window.location.hash);
+}
+
 const initialThemeMode = getInitialThemeMode();
 const initialTheme =
   initialThemeMode === "system"
