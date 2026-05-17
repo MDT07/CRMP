@@ -1,23 +1,14 @@
-import { useEffect, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { Mail, Paperclip, RefreshCw } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
 
-import {
-  fetchEmailMessages,
-  updateEmailMessage,
-  type EmailMessage,
-} from "../../lib/crm-api";
+import { type EmailMessage, fetchEmailMessages, updateEmailMessage } from "../../lib/crm-api";
 import { PageHeader, SurfaceCard } from "../crm-ui";
-import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
+import { Button } from "../ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Skeleton } from "../ui/skeleton";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "../ui/dialog";
 
 interface EmailListProps {
   contactId?: string;
@@ -26,20 +17,11 @@ interface EmailListProps {
   className?: string;
 }
 
-export function EmailList({
-  contactId,
-  dealId,
-  accountId,
-  className,
-}: EmailListProps) {
+export function EmailList({ contactId, dealId, accountId, className }: EmailListProps) {
   const [emails, setEmails] = useState<EmailMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEmail, setSelectedEmail] = useState<EmailMessage | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-
-  useEffect(() => {
-    loadEmails();
-  }, [contactId, dealId, accountId]);
 
   const loadEmails = async () => {
     try {
@@ -53,9 +35,9 @@ export function EmailList({
       });
       console.log("Email response:", response);
       setEmails(response.messages);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error loading emails:", error);
-      const errorMessage = error?.message || "Failed to load emails";
+      const errorMessage = error instanceof Error ? error.message : "Failed to load emails";
       toast.error(errorMessage);
     } finally {
       setLoading(false);
@@ -73,9 +55,7 @@ export function EmailList({
 
     try {
       await updateEmailMessage(email.id, { is_read: true });
-      setEmails(
-        emails.map((e) => (e.id === email.id ? { ...e, is_read: true } : e))
-      );
+      setEmails(emails.map((e) => (e.id === email.id ? { ...e, is_read: true } : e)));
     } catch (error) {
       toast.error("Failed to mark email as read");
       console.error("Error marking email as read:", error);
@@ -100,8 +80,8 @@ export function EmailList({
   if (loading) {
     return (
       <div className={`space-y-4 ${className}`}>
-        {[1, 2, 3].map((i) => (
-          <SurfaceCard key={i} className="p-4">
+        {[1, 2, 3].map((_i) => (
+          <SurfaceCard key={_i} className="p-4">
             <div className="flex items-start gap-4">
               <Skeleton className="h-10 w-10 rounded-full" />
               <div className="flex-1 space-y-2">
@@ -120,19 +100,9 @@ export function EmailList({
     <>
       <div className={`space-y-4 ${className}`}>
         <div className="flex items-center justify-between">
-          <PageHeader
-            title="Emails"
-            description={`${emails.length} messages`}
-          />
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRefresh}
-            disabled={refreshing}
-          >
-            <RefreshCw
-              className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
-            />
+          <PageHeader title="Emails" description={`${emails.length} messages`} />
+          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
+            <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
             Refresh
           </Button>
         </div>
@@ -157,13 +127,9 @@ export function EmailList({
               onClick={() => handleEmailClick(email)}
             >
               <div className="flex items-start gap-4">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10"
-                >
-                  <span className="text-sm font-semibold text-primary"
-                  >
-                    {(email.from_name || email.from_email || "?")
-                      .charAt(0)
-                      .toUpperCase()}
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                  <span className="text-sm font-semibold text-primary">
+                    {(email.from_name || email.from_email || "?").charAt(0).toUpperCase()}
                   </span>
                 </div>
 
@@ -193,9 +159,7 @@ export function EmailList({
                   </div>
 
                   <h4
-                    className={`mt-1 truncate ${
-                      !email.is_read ? "font-semibold" : "font-medium"
-                    }`}
+                    className={`mt-1 truncate ${!email.is_read ? "font-semibold" : "font-medium"}`}
                   >
                     {email.subject || "(No subject)"}
                   </h4>
@@ -206,9 +170,7 @@ export function EmailList({
 
                   <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
                     <span>To: {formatRecipients(email.to_emails)}</span>
-                    {email.has_attachments && (
-                      <Paperclip className="h-3 w-3" />
-                    )}
+                    {email.has_attachments && <Paperclip className="h-3 w-3" />}
                   </div>
                 </div>
               </div>
@@ -217,10 +179,7 @@ export function EmailList({
         )}
       </div>
 
-      <Dialog
-        open={!!selectedEmail}
-        onOpenChange={(open) => !open && setSelectedEmail(null)}
-      >
+      <Dialog open={!!selectedEmail} onOpenChange={(open) => !open && setSelectedEmail(null)}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           {selectedEmail && (
             <>
@@ -232,10 +191,8 @@ export function EmailList({
 
               <div className="space-y-4">
                 <div className="flex items-start gap-4 border-b pb-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10"
-                  >
-                    <span className="text-sm font-semibold text-primary"
-                    >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                    <span className="text-sm font-semibold text-primary">
                       {(selectedEmail.from_name || selectedEmail.from_email || "?")
                         .charAt(0)
                         .toUpperCase()}
@@ -248,9 +205,7 @@ export function EmailList({
                         <p className="font-semibold">
                           {selectedEmail.from_name || selectedEmail.from_email}
                         </p>
-                        <p className="text-sm text-muted-foreground">
-                          {selectedEmail.from_email}
-                        </p>
+                        <p className="text-sm text-muted-foreground">{selectedEmail.from_email}</p>
                       </div>
                       <span className="text-sm text-muted-foreground">
                         {selectedEmail.received_at
@@ -266,17 +221,13 @@ export function EmailList({
                 <div className="space-y-2 text-sm">
                   <div className="flex gap-2">
                     <span className="w-12 text-muted-foreground">To:</span>
-                    <span>
-                      {selectedEmail.to_emails.join(", ")}
-                    </span>
+                    <span>{selectedEmail.to_emails.join(", ")}</span>
                   </div>
 
                   {selectedEmail.cc_emails && selectedEmail.cc_emails.length > 0 && (
                     <div className="flex gap-2">
                       <span className="w-12 text-muted-foreground">Cc:</span>
-                      <span>
-                        {selectedEmail.cc_emails.join(", ")}
-                      </span>
+                      <span>{selectedEmail.cc_emails.join(", ")}</span>
                     </div>
                   )}
                 </div>
@@ -285,11 +236,10 @@ export function EmailList({
                   <div className="border-y py-4">
                     <p className="mb-2 text-sm font-medium">Attachments</p>
                     <div className="flex flex-wrap gap-2">
-                      {selectedEmail.attachments.map((attachment, i) => (
-                        <Badge key={i} variant="secondary">
+                      {selectedEmail.attachments.map((attachment) => (
+                        <Badge key={attachment.filename} variant="secondary">
                           <Paperclip className="mr-1 h-3 w-3" />
-                          {attachment.filename} (
-                          {Math.round(attachment.size / 1024)} KB)
+                          {attachment.filename} ({Math.round(attachment.size / 1024)} KB)
                         </Badge>
                       ))}
                     </div>

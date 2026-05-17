@@ -1,28 +1,18 @@
-import { useEffect, useMemo, useState } from "react";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  Pie,
-  PieChart,
-  XAxis,
-  YAxis,
-} from "recharts";
 import { Activity, DollarSign, Gauge, Target } from "lucide-react";
-
+import { useEffect, useMemo, useState } from "react";
+import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, XAxis, YAxis } from "recharts";
+import { buildPageAssistantSelection } from "../../lib/assistant-hooks";
 import {
+  type ChannelMixPoint,
   fetchChannelMix,
   fetchPipelineBreakdown,
   fetchRepPerformance,
-  type ChannelMixPoint,
   type PipelineStagePoint,
   type RepPerformancePoint,
 } from "../../lib/crm-api";
-import { buildPageAssistantSelection } from "../../lib/assistant-hooks";
 import { useCrmApp } from "../../providers/CrmProvider";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "../ui/chart";
 import { MetricCard, PageHeader, StatusBadge, SurfaceCard } from "../crm-ui";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "../ui/chart";
 
 const stageLabels: Record<string, string> = {
   lead: "Leads",
@@ -115,18 +105,13 @@ function buildPreviewReps(): RepPerformancePoint[] {
 }
 
 export function AnalyticsPage() {
-  const {
-    clearAssistantSelection,
-    connection,
-    dashboard,
-    isGuest,
-    setAssistantSelection,
-  } = useCrmApp();
+  const { clearAssistantSelection, connection, dashboard, isGuest, setAssistantSelection } =
+    useCrmApp();
   const [pipeline, setPipeline] = useState<PipelineStagePoint[]>(buildPreviewPipeline());
   const [channels, setChannels] = useState<ChannelMixPoint[]>(buildPreviewChannels());
   const [reps, setReps] = useState<RepPerformancePoint[]>(buildPreviewReps());
   const [source, setSource] = useState<"loading" | "live" | "preview">(
-    connection === "loading" ? "loading" : "preview",
+    connection === "loading" ? "loading" : "preview"
   );
   const [error, setError] = useState<string | null>(null);
 
@@ -141,7 +126,7 @@ export function AnalyticsPage() {
       setError(
         connection === "fallback"
           ? "Analytics is using preview data because backend sync is unavailable."
-          : "Guest mode keeps analytics in preview.",
+          : "Guest mode keeps analytics in preview."
       );
       setPipeline(buildPreviewPipeline());
       setChannels(buildPreviewChannels());
@@ -192,7 +177,7 @@ export function AnalyticsPage() {
         dataSource: source,
         selectedEntities: [],
         summary: "Pipeline and performance analytics context",
-      }),
+      })
     );
 
     return () => {
@@ -217,7 +202,7 @@ export function AnalyticsPage() {
         month: point.label,
         revenue: Number((point.revenue / 1000).toFixed(2)),
       })),
-    [dashboard.growth],
+    [dashboard.growth]
   );
   const totalPipelineValue = pipeline.reduce((sum, stage) => sum + stage.value, 0);
   const totalDeals = pipeline.reduce((sum, stage) => sum + stage.count, 0);
@@ -276,7 +261,9 @@ export function AnalyticsPage() {
         meta={
           <>
             <StatusBadge tone={sourceTone}>{sourceLabel}</StatusBadge>
-            <StatusBadge tone="success">{formatCurrency(totalPipelineValue)} pipeline value</StatusBadge>
+            <StatusBadge tone="success">
+              {formatCurrency(totalPipelineValue)} pipeline value
+            </StatusBadge>
           </>
         }
       />
@@ -297,7 +284,9 @@ export function AnalyticsPage() {
         <SurfaceCard tone="accent" className="gap-0">
           <div className="border-b border-border/70 px-5 py-5">
             <p className="text-sm font-semibold text-foreground">Revenue Trend</p>
-            <p className="text-sm text-muted-foreground">Weekly revenue trend from the dashboard growth series.</p>
+            <p className="text-sm text-muted-foreground">
+              Weekly revenue trend from the dashboard growth series.
+            </p>
           </div>
           <div className="px-2 pb-2 sm:px-5 sm:pb-5">
             <ChartContainer config={revenueChartConfig} className="h-[300px] w-full">
@@ -327,7 +316,9 @@ export function AnalyticsPage() {
         <SurfaceCard tone="subtle" className="gap-0">
           <div className="border-b border-border/70 px-5 py-5">
             <p className="text-sm font-semibold text-foreground">Pipeline Conversion</p>
-            <p className="text-sm text-muted-foreground">Conversion quality across major funnel stages.</p>
+            <p className="text-sm text-muted-foreground">
+              Conversion quality across major funnel stages.
+            </p>
           </div>
           <div className="space-y-4 px-5 py-5">
             {conversionData.map((item, index) => {
@@ -351,7 +342,9 @@ export function AnalyticsPage() {
                   <div className="mt-2 h-2 rounded-full bg-background/60">
                     <div
                       className={`h-2 rounded-full ${
-                        toneBarClasses[tone === "warning" ? "warning" : tone === "success" ? "success" : "info"]
+                        toneBarClasses[
+                          tone === "warning" ? "warning" : tone === "success" ? "success" : "info"
+                        ]
                       }`}
                       style={{ width: `${pct}%` }}
                     />
@@ -367,12 +360,21 @@ export function AnalyticsPage() {
         <SurfaceCard tone="subtle" className="gap-0">
           <div className="border-b border-border/70 px-5 py-5">
             <p className="text-sm font-semibold text-foreground">Channel Mix</p>
-            <p className="text-sm text-muted-foreground">Inbound vs outbound communication footprint by channel.</p>
+            <p className="text-sm text-muted-foreground">
+              Inbound vs outbound communication footprint by channel.
+            </p>
           </div>
           <div className="px-2 py-4 sm:px-5">
             <ChartContainer config={sourceChartConfig} className="h-[240px] w-full">
               <PieChart>
-                <Pie data={sourceData} dataKey="value" nameKey="name" innerRadius={58} outerRadius={88} paddingAngle={4}>
+                <Pie
+                  data={sourceData}
+                  dataKey="value"
+                  nameKey="name"
+                  innerRadius={58}
+                  outerRadius={88}
+                  paddingAngle={4}
+                >
                   {sourceData.map((item) => (
                     <Cell key={item.name} fill={item.fill} />
                   ))}
@@ -395,10 +397,13 @@ export function AnalyticsPage() {
               {sourceData.map((source) => (
                 <div
                   key={source.name}
-                  className="flex items-center justify-between rounded-2xl border border-border/70 bg-background/35 px-3 py-2"
+                  className="flex items-center justify-between rounded-2xl border border-border/70 bg-background/35 px-3 py-2 transition-all duration-200 hover:border-primary/15 hover:shadow-sm"
                 >
                   <div className="flex items-center gap-2">
-                    <span className="size-2.5 rounded-full" style={{ backgroundColor: source.fill }} />
+                    <span
+                      className="size-2.5 rounded-full"
+                      style={{ backgroundColor: source.fill }}
+                    />
                     <span className="text-sm text-foreground">{source.name}</span>
                   </div>
                   <span className="font-metric text-sm text-foreground">{source.value}%</span>
@@ -411,13 +416,15 @@ export function AnalyticsPage() {
         <SurfaceCard tone="accent" className="gap-0">
           <div className="border-b border-border/70 px-5 py-5">
             <p className="text-sm font-semibold text-foreground">Rep Performance</p>
-            <p className="text-sm text-muted-foreground">Won revenue, open deals, and current task load per teammate.</p>
+            <p className="text-sm text-muted-foreground">
+              Won revenue, open deals, and current task load per teammate.
+            </p>
           </div>
           <div className="space-y-3 px-5 py-5">
             {reps.map((rep) => (
               <div
                 key={rep.user_id}
-                className="grid gap-3 rounded-2xl border border-border/70 bg-background/35 px-4 py-3 sm:grid-cols-[minmax(0,1.2fr)_auto_auto_auto]"
+                className="grid gap-3 rounded-2xl border border-border/70 bg-background/35 px-4 py-3 transition-all duration-200 hover:border-primary/15 hover:shadow-sm sm:grid-cols-[minmax(0,1.2fr)_auto_auto_auto]"
               >
                 <div>
                   <p className="text-sm font-semibold text-foreground">{rep.name}</p>
@@ -429,7 +436,9 @@ export function AnalyticsPage() {
                 </div>
                 <div className="text-right">
                   <p className="text-xs text-muted-foreground">Won Revenue</p>
-                  <p className="font-metric text-sm text-foreground">{formatCurrency(rep.won_revenue)}</p>
+                  <p className="font-metric text-sm text-foreground">
+                    {formatCurrency(rep.won_revenue)}
+                  </p>
                 </div>
                 <div className="text-right">
                   <p className="text-xs text-muted-foreground">Open Tasks</p>

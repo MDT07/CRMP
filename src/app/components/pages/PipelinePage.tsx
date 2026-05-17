@@ -1,68 +1,60 @@
 import {
-  DndContext,
-  DragOverlay,
   closestCorners,
+  DndContext,
+  type DragEndEvent,
+  type DragOverEvent,
+  DragOverlay,
+  type DragStartEvent,
+  type DropAnimation,
+  defaultDropAnimationSideEffects,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
-  DragStartEvent,
-  DragOverEvent,
-  DragEndEvent,
-  defaultDropAnimationSideEffects,
-  DropAnimation,
 } from "@dnd-kit/core";
 import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
   useSortable,
+  verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { useEffect, useMemo, useState } from "react";
 import {
-  Bot,
   Briefcase,
   Calendar,
+  ChevronDown,
+  ChevronUp,
   Clock,
   DollarSign,
+  Filter,
   Flag,
+  GripVertical,
   MoreHorizontal,
   Plus,
+  Search,
   Sparkles,
   TrendingUp,
   User,
   Zap,
-  GripVertical,
-  ChevronDown,
-  ChevronUp,
-  Filter,
-  Search,
 } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-
+import { buildPageAssistantSelection } from "../../lib/assistant-hooks";
 import {
+  type Contact,
   createDeal,
+  type DealStage,
   fetchCompanies,
   fetchContacts,
   fetchDeals,
   updateDeal,
-  type Contact,
-  type DealStage,
 } from "../../lib/crm-api";
-import { buildPageAssistantSelection } from "../../lib/assistant-hooks";
 import { formatCurrencyValue, formatDueLabel } from "../../lib/crm-format";
-import { fallbackDeals, dealTemplates } from "../../lib/fallback-data";
+import { dealTemplates, fallbackDeals } from "../../lib/fallback-data";
 import { useCrmApp } from "../../providers/CrmProvider";
-import {
-  MetricCard,
-  PageHeader,
-  SmartActionButton,
-  StatusBadge,
-  SurfaceCard,
-} from "../crm-ui";
+import { MetricCard, PageHeader, SmartActionButton, StatusBadge, SurfaceCard } from "../crm-ui";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { cn } from "../ui/utils";
@@ -95,20 +87,20 @@ type StageTone = "primary" | "info" | "warning" | "success" | "danger";
 
 // Stage Configuration
 const stageConfigs: StageConfig[] = [
-  { id: "lead", label: "Lead", tone: "info", color: "#3b82f6" },
-  { id: "qualified", label: "Qualified", tone: "info", color: "#06b6d4" },
-  { id: "proposal", label: "Proposal", tone: "primary", color: "#8b5cf6" },
-  { id: "negotiation", label: "Negotiation", tone: "warning", color: "#f59e0b" },
-  { id: "closed_won", label: "Closed Won", tone: "success", color: "#10b981" },
-  { id: "closed_lost", label: "Closed Lost", tone: "danger", color: "#ef4444" },
+  { id: "lead", label: "Lead", tone: "info", color: "#0071e3" },
+  { id: "qualified", label: "Qualified", tone: "info", color: "#5ac8fa" },
+  { id: "proposal", label: "Proposal", tone: "primary", color: "#af52de" },
+  { id: "negotiation", label: "Negotiation", tone: "warning", color: "#ff9500" },
+  { id: "closed_won", label: "Closed Won", tone: "success", color: "#34c759" },
+  { id: "closed_lost", label: "Closed Lost", tone: "danger", color: "#ff3b30" },
 ];
 
 const toneClasses: Record<StageTone, string> = {
-  primary: "bg-primary text-primary",
-  info: "bg-info text-info",
-  warning: "bg-warning text-warning",
-  success: "bg-success text-success",
-  danger: "bg-danger text-danger",
+  primary: "bg-primary/15 text-primary",
+  info: "bg-info/15 text-info",
+  warning: "bg-warning/15 text-warning",
+  success: "bg-success/15 text-success",
+  danger: "bg-destructive/15 text-destructive",
 };
 
 const badgeTone: Record<StageTone, "primary" | "info" | "warning" | "success" | "danger"> = {
@@ -119,16 +111,14 @@ const badgeTone: Record<StageTone, "primary" | "info" | "warning" | "success" | 
   danger: "danger",
 };
 
-const buttonVariant: Record<
-  StageTone,
-  "default" | "info" | "warning" | "success" | "destructive"
-> = {
-  primary: "default",
-  info: "info",
-  warning: "warning",
-  success: "success",
-  danger: "destructive",
-};
+const buttonVariant: Record<StageTone, "default" | "info" | "warning" | "success" | "destructive"> =
+  {
+    primary: "default",
+    info: "info",
+    warning: "warning",
+    success: "success",
+    danger: "destructive",
+  };
 
 // Sortable Deal Card Component
 function SortableDealCard({
@@ -144,14 +134,7 @@ function SortableDealCard({
   onOptions: (e: React.MouseEvent) => void;
   isOverlay?: boolean;
 }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: String(deal.id),
     data: {
       type: "Deal",
@@ -165,7 +148,8 @@ function SortableDealCard({
     transition,
   };
 
-  const stage = stageConfigs.find((s) => s.id === stageId)!;
+  const stage = stageConfigs.find((s) => s.id === stageId);
+  if (!stage) return null;
 
   return (
     <motion.div
@@ -193,26 +177,17 @@ function SortableDealCard({
       )}
     >
       {/* Drag Handle */}
-      <div
-        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
         <GripVertical className="size-4 text-muted-foreground cursor-grab active:cursor-grabbing" />
       </div>
 
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <p className="truncate text-sm font-semibold text-foreground">
-              {deal.company}
-            </p>
-            {deal.priority === "high" && (
-              <Flag className="size-3 text-warning" />
-            )}
+            <p className="truncate text-sm font-semibold text-foreground">{deal.company}</p>
+            {deal.priority === "high" && <Flag className="size-3 text-warning" />}
           </div>
-          <p className="mt-1 truncate text-xs text-muted-foreground">
-            {deal.title}
-          </p>
+          <p className="mt-1 truncate text-xs text-muted-foreground">{deal.title}</p>
           <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
             <User className="size-3.5" />
             {deal.contact}
@@ -278,12 +253,12 @@ function SortableDealCard({
                 stage.tone === "success"
                   ? "bg-success"
                   : stage.tone === "warning"
-                  ? "bg-warning"
-                  : stage.tone === "danger"
-                  ? "bg-danger"
-                  : stage.tone === "primary"
-                  ? "bg-primary"
-                  : "bg-info"
+                    ? "bg-warning"
+                    : stage.tone === "danger"
+                      ? "bg-danger"
+                      : stage.tone === "primary"
+                        ? "bg-primary"
+                        : "bg-info"
               )}
             />
           </div>
@@ -339,10 +314,7 @@ function StageColumn({
     );
   }, [deals, searchQuery]);
 
-  const stageTotal = filteredDeals.reduce(
-    (sum, deal) => sum + parseCurrencyLabel(deal.value),
-    0
-  );
+  const stageTotal = filteredDeals.reduce((sum, deal) => sum + parseCurrencyLabel(deal.value), 0);
 
   return (
     <div
@@ -355,13 +327,9 @@ function StageColumn({
       {/* Stage Header */}
       <div className="flex items-center justify-between border-b border-border/75 px-3.5 py-3">
         <div className="flex items-center gap-2">
-          <span
-            className={cn("size-2 rounded-full", toneClasses[stage.tone])}
-          />
+          <span className={cn("size-2 rounded-full", toneClasses[stage.tone])} />
           <p className="text-sm font-semibold text-foreground">{stage.label}</p>
-          <StatusBadge tone={badgeTone[stage.tone]}>
-            {filteredDeals.length}
-          </StatusBadge>
+          <StatusBadge tone={badgeTone[stage.tone]}>{filteredDeals.length}</StatusBadge>
         </div>
         <Button
           variant={buttonVariant[stage.tone]}
@@ -406,9 +374,7 @@ function StageColumn({
               <Briefcase className="size-5 text-muted-foreground" />
             </div>
             <p className="text-sm text-muted-foreground">No deals</p>
-            <p className="text-xs text-muted-foreground">
-              Drag deals here or click + to add
-            </p>
+            <p className="text-xs text-muted-foreground">Drag deals here or click + to add</p>
           </div>
         )}
       </div>
@@ -443,14 +409,12 @@ function buildDealBoard(
 
   for (const deal of deals) {
     const contact = contactMap.get(deal.contact_id);
-    const company =
-      contact?.company_id ? companyMap.get(contact.company_id)?.name : undefined;
+    const company = contact?.company_id ? companyMap.get(contact.company_id)?.name : undefined;
 
     // Calculate priority based on days until close and probability
     const daysUntilClose = deal.expected_close_date
       ? Math.ceil(
-          (new Date(deal.expected_close_date).getTime() - Date.now()) /
-            (1000 * 60 * 60 * 24)
+          (new Date(deal.expected_close_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
         )
       : 999;
     let priority: "high" | "medium" | "low" = "low";
@@ -466,17 +430,14 @@ function buildDealBoard(
       close: formatDueLabel(deal.expected_close_date),
       prob: Math.round(deal.probability),
       priority,
-      lastActivity: deal.updated_at
-        ? new Date(deal.updated_at).toLocaleDateString()
-        : undefined,
+      lastActivity: deal.updated_at ? new Date(deal.updated_at).toLocaleDateString() : undefined,
     });
   }
 
   // Sort by value descending
   for (const stageId of Object.keys(board) as DealStage[]) {
     board[stageId].sort(
-      (left, right) =>
-        parseCurrencyLabel(right.value) - parseCurrencyLabel(left.value)
+      (left, right) => parseCurrencyLabel(right.value) - parseCurrencyLabel(left.value)
     );
   }
 
@@ -491,12 +452,7 @@ function addDays(days: number) {
 
 // Main Pipeline Component
 export function PipelinePage() {
-  const {
-    clearAssistantSelection,
-    connection,
-    isGuest,
-    setAssistantSelection,
-  } = useCrmApp();
+  const { clearAssistantSelection, connection, isGuest, setAssistantSelection } = useCrmApp();
   const guestPreviewMessage =
     "Guest mode is showing demo pipeline data so you can explore deals without registration.";
 
@@ -510,8 +466,8 @@ export function PipelinePage() {
     connection === "fallback"
       ? "Backend connection is unavailable, so the pipeline board is showing preview data."
       : isGuest
-      ? guestPreviewMessage
-      : null
+        ? guestPreviewMessage
+        : null
   );
 
   // Drag and Drop State
@@ -523,19 +479,15 @@ export function PipelinePage() {
   const [showFilters, setShowFilters] = useState(false);
 
   const sourceTone =
-    dataSource === "live"
-      ? "success"
-      : dataSource === "loading" || isGuest
-      ? "info"
-      : "warning";
+    dataSource === "live" ? "success" : dataSource === "loading" || isGuest ? "info" : "warning";
   const sourceLabel =
     dataSource === "live"
       ? "Live pipeline"
       : dataSource === "loading"
-      ? "Syncing"
-      : isGuest
-      ? "Guest pipeline"
-      : "Preview board";
+        ? "Syncing"
+        : isGuest
+          ? "Guest pipeline"
+          : "Preview board";
 
   // Sensors for drag and drop
   const sensors = useSensors(
@@ -562,6 +514,7 @@ export function PipelinePage() {
     setError(null);
   };
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: load function defined below
   useEffect(() => {
     if (connection === "loading") {
       setDataSource("loading");
@@ -583,7 +536,7 @@ export function PipelinePage() {
     const sync = async () => {
       try {
         await loadPipeline();
-      } catch (loadError) {
+      } catch (_loadError) {
         if (cancelled) {
           return;
         }
@@ -602,7 +555,7 @@ export function PipelinePage() {
     return () => {
       cancelled = true;
     };
-  }, [connection]);
+  }, [connection, isGuest]);
 
   useEffect(() => {
     const selectedEntities = stageConfigs
@@ -613,7 +566,6 @@ export function PipelinePage() {
         entity_id: String(deal.id),
       }));
 
-    // @ts-ignore - Type mismatch between PageAssistantSelection and AssistantSelection
     setAssistantSelection(
       buildPageAssistantSelection({
         page: "Pipeline",
@@ -674,20 +626,18 @@ export function PipelinePage() {
       // Move deal to new stage
       setDeals((prev) => {
         const newDeals = { ...prev };
-        newDeals[activeStageId!] = newDeals[activeStageId!].filter(
-          (d) => String(d.id) !== activeId
-        );
-        newDeals[overStage.id] = [activeDealData!, ...newDeals[overStage.id]];
+        newDeals[activeStageId] = newDeals[activeStageId].filter((d) => String(d.id) !== activeId);
+        newDeals[overStage.id] = activeDealData
+          ? [activeDealData, ...newDeals[overStage.id]]
+          : newDeals[overStage.id];
         return newDeals;
       });
 
       // Update backend if live
       if (dataSource === "live") {
-        updateDeal(activeId, { pipeline_stage: overStage.id }).catch(
-          () => {
-            toast.error("Failed to update deal stage. Please try again.");
-          }
-        );
+        updateDeal(activeId, { pipeline_stage: overStage.id }).catch(() => {
+          toast.error("Failed to update deal stage. Please try again.");
+        });
       }
     }
   };
@@ -741,16 +691,13 @@ export function PipelinePage() {
     0
   );
   const activeDeals = useMemo(
-    () =>
-      [...deals.lead, ...deals.qualified, ...deals.proposal, ...deals.negotiation],
+    () => [...deals.lead, ...deals.qualified, ...deals.proposal, ...deals.negotiation],
     [deals]
   );
   const highIntentCount = deals.proposal.length + deals.negotiation.length;
   const averageProbability =
     activeDeals.length > 0
-      ? Math.round(
-          activeDeals.reduce((sum, deal) => sum + deal.prob, 0) / activeDeals.length
-        )
+      ? Math.round(activeDeals.reduce((sum, deal) => sum + deal.prob, 0) / activeDeals.length)
       : 0;
   const stalledPressure = deals.negotiation.length + Math.max(0, deals.proposal.length - 1);
 
@@ -905,25 +852,38 @@ export function PipelinePage() {
             disabled={isCreating}
             items={[
               {
-                label: "AI-suggest amount and stage",
+                label: "AgentP suggest amount and stage",
                 description:
                   "Use current pipeline patterns to start with a stronger value, stage, and probability.",
-                icon: Bot,
-                onSelect: () => {},
+                icon: Sparkles,
+                onSelect: () => {
+                  toast.info("AgentP suggest", {
+                    description:
+                      "Pipeline pattern analysis will suggest optimal amount, stage, and probability.",
+                  });
+                },
               },
               {
                 label: "Convert inbox thread",
                 description:
                   "Create a deal from an active conversation and keep the communication history attached.",
                 icon: Sparkles,
-                onSelect: () => {},
+                onSelect: () => {
+                  toast.info("Convert inbox thread", {
+                    description: "Select an active conversation to convert into a pipeline deal.",
+                  });
+                },
               },
               {
                 label: "Launch deal automation",
                 description:
                   "Attach reminders, stakeholder follow-ups, and stage-based automations from day one.",
                 icon: Zap,
-                onSelect: () => {},
+                onSelect: () => {
+                  toast.info("Launch deal automation", {
+                    description: "Automation builder will open with deal-triggered templates.",
+                  });
+                },
               },
             ]}
           />
@@ -986,7 +946,11 @@ export function PipelinePage() {
         >
           <Filter className="size-4 mr-2" />
           Filters
-          {showFilters ? <ChevronUp className="size-4 ml-2" /> : <ChevronDown className="size-4 ml-2" />}
+          {showFilters ? (
+            <ChevronUp className="size-4 ml-2" />
+          ) : (
+            <ChevronDown className="size-4 ml-2" />
+          )}
         </Button>
       </div>
 
@@ -999,7 +963,7 @@ export function PipelinePage() {
         onDragEnd={handleDragEnd}
       >
         <div className="overflow-x-auto pb-4">
-          <div className="flex gap-4 min-w-max">
+          <div className="flex gap-3 min-w-max">
             {visibleStages.map((stage) => (
               <StageColumn
                 key={stage.id}

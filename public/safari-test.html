@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Safari Test</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #000; color: #0f0; }
+        .error { color: #f00; }
+        #log { white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <h1>Safari Error Capture</h1>
+    <div id="log"></div>
+    <div id="root"></div>
+    <script>
+        const log = document.getElementById('log');
+        function add(msg, cls) {
+            const div = document.createElement('div');
+            div.className = cls || '';
+            div.textContent = new Date().toLocaleTimeString() + ': ' + msg;
+            log.appendChild(div);
+        }
+        
+        window.onerror = function(msg, url, line, col, error) {
+            add('ERROR: ' + msg + ' at ' + url + ':' + line + ':' + col, 'error');
+            if (error && error.stack) add('Stack: ' + error.stack, 'error');
+            return true;
+        };
+        
+        window.addEventListener('unhandledrejection', function(e) {
+            add('REJECTION: ' + e.reason, 'error');
+        });
+        
+        add('Browser: ' + navigator.userAgent);
+        add('Starting app...');
+    </script>
+    <script type="module" src="/src/main.tsx"></script>
+    <script>
+        setTimeout(() => {
+            const root = document.getElementById('root');
+            add('Root children: ' + root.children.length);
+            add('Root HTML length: ' + root.innerHTML.length);
+        }, 3000);
+    </script>
+</body>
+</html>

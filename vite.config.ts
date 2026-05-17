@@ -1,16 +1,19 @@
 import { defineConfig } from 'vite'
 import { fileURLToPath, URL } from 'node:url'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   plugins: [
-    // The React and Tailwind plugins are both required for Make, even if
-    // Tailwind is not being actively used – do not remove them
-    react(),
+    react({
+      // Disable fast refresh to fix Safari preamble issue in development
+      // Re-enable for HMR in Chrome if needed
+      fastRefresh: false,
+    }),
+    tailwindcss(),
   ],
   resolve: {
     alias: {
-      // Alias @ to the src directory
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
@@ -19,11 +22,9 @@ export default defineConfig({
     port: 3225,
     host: true,
     watch: {
-      // Ignore system directories that cause reload loops
       ignored: ['**/.bg-shell/**', '**/node_modules/**', '**/.git/**'],
     },
   },
 
-  // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
   assetsInclude: ['**/*.svg', '**/*.csv'],
 })

@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import {
   ArrowLeft,
   Bot,
@@ -10,27 +9,18 @@ import {
   Send,
   Smile,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import {
-  approveAiProposal,
-  type AIActionProposal,
   createMessage,
   createTask,
-  fetchAiProposals,
   fetchCompanies,
   fetchContacts,
   fetchMessages,
-  type GroundedEvidenceItem,
-  rejectAiProposal,
-  sendInboxCopilotMessage,
   type MessageChannel,
 } from "../../lib/crm-api";
-import {
-  formatConversationTime,
-  formatRelativeShort,
-  getInitials,
-} from "../../lib/crm-format";
+import { formatConversationTime, formatRelativeShort, getInitials } from "../../lib/crm-format";
 import { useCrmApp } from "../../providers/CrmProvider";
 import { PageHeader, SmartActionButton, StatusBadge, SurfaceCard } from "../crm-ui";
 import { Button } from "../ui/button";
@@ -62,35 +52,147 @@ interface ConversationSummary {
 }
 
 const fallbackConversations: ConversationSummary[] = [
-  { id: "1", name: "Sarah Mitchell", company: "Nexus Corp", preview: "Can we schedule a call for the final contract review?", time: "2m", unread: 2, avatar: "SM", channel: "email", online: true },
-  { id: "2", name: "James Hartwell", company: "TechCorp Inc.", preview: "The proposal looks great. We only have one pricing question.", time: "18m", unread: 1, avatar: "JH", channel: "chat", online: true },
-  { id: "3", name: "Lena Vogt", company: "BlueSky Digital", preview: "Thanks for the follow-up. I will bring this to the team tomorrow.", time: "1h", unread: 0, avatar: "LV", channel: "whatsapp", online: false },
-  { id: "4", name: "Carlos Mendes", company: "Vertex Solutions", preview: "When is the earliest we can lock the onboarding date?", time: "3h", unread: 0, avatar: "CM", channel: "email", online: false },
-  { id: "5", name: "Aisha Patel", company: "NovaStar Ltd", preview: "I reviewed the contract and have two final comments for legal.", time: "1d", unread: 0, avatar: "AP", channel: "chat", online: false },
+  {
+    id: "1",
+    name: "Sarah Mitchell",
+    company: "Nexus Corp",
+    preview: "Can we schedule a call for the final contract review?",
+    time: "2m",
+    unread: 2,
+    avatar: "SM",
+    channel: "email",
+    online: true,
+  },
+  {
+    id: "2",
+    name: "James Hartwell",
+    company: "TechCorp Inc.",
+    preview: "The proposal looks great. We only have one pricing question.",
+    time: "18m",
+    unread: 1,
+    avatar: "JH",
+    channel: "chat",
+    online: true,
+  },
+  {
+    id: "3",
+    name: "Lena Vogt",
+    company: "BlueSky Digital",
+    preview: "Thanks for the follow-up. I will bring this to the team tomorrow.",
+    time: "1h",
+    unread: 0,
+    avatar: "LV",
+    channel: "whatsapp",
+    online: false,
+  },
+  {
+    id: "4",
+    name: "Carlos Mendes",
+    company: "Vertex Solutions",
+    preview: "When is the earliest we can lock the onboarding date?",
+    time: "3h",
+    unread: 0,
+    avatar: "CM",
+    channel: "email",
+    online: false,
+  },
+  {
+    id: "5",
+    name: "Aisha Patel",
+    company: "NovaStar Ltd",
+    preview: "I reviewed the contract and have two final comments for legal.",
+    time: "1d",
+    unread: 0,
+    avatar: "AP",
+    channel: "chat",
+    online: false,
+  },
 ];
 
 const fallbackMessages: Record<string, ConversationMessage[]> = {
   "1": [
-    { id: 1, content: "Hi! I wanted to follow up on the proposal you sent last week.", time: "10:22 AM", isMe: false },
-    { id: 2, content: "Thanks for reaching out. I attached the updated version with the enterprise pricing breakdown.", time: "10:25 AM", isMe: true },
-    { id: 3, content: "This looks really good. Can we schedule a call to discuss the enterprise tier?", time: "10:28 AM", isMe: false },
-    { id: 4, content: "Absolutely. I am available Thursday afternoon or Friday morning. Which works better?", time: "10:31 AM", isMe: true },
-    { id: 5, content: "Friday morning works great. Can we also review the final contract language?", time: "10:35 AM", isMe: false },
+    {
+      id: 1,
+      content: "Hi! I wanted to follow up on the proposal you sent last week.",
+      time: "10:22 AM",
+      isMe: false,
+    },
+    {
+      id: 2,
+      content:
+        "Thanks for reaching out. I attached the updated version with the enterprise pricing breakdown.",
+      time: "10:25 AM",
+      isMe: true,
+    },
+    {
+      id: 3,
+      content: "This looks really good. Can we schedule a call to discuss the enterprise tier?",
+      time: "10:28 AM",
+      isMe: false,
+    },
+    {
+      id: 4,
+      content:
+        "Absolutely. I am available Thursday afternoon or Friday morning. Which works better?",
+      time: "10:31 AM",
+      isMe: true,
+    },
+    {
+      id: 5,
+      content: "Friday morning works great. Can we also review the final contract language?",
+      time: "10:35 AM",
+      isMe: false,
+    },
   ],
   "2": [
-    { id: 1, content: "We like the proposal overall and want to move quickly.", time: "9:14 AM", isMe: false },
-    { id: 2, content: "Great to hear. Which part should we tighten up first?", time: "9:18 AM", isMe: true },
-    { id: 3, content: "Mostly pricing and rollout timing for the second team.", time: "9:22 AM", isMe: false },
+    {
+      id: 1,
+      content: "We like the proposal overall and want to move quickly.",
+      time: "9:14 AM",
+      isMe: false,
+    },
+    {
+      id: 2,
+      content: "Great to hear. Which part should we tighten up first?",
+      time: "9:18 AM",
+      isMe: true,
+    },
+    {
+      id: 3,
+      content: "Mostly pricing and rollout timing for the second team.",
+      time: "9:22 AM",
+      isMe: false,
+    },
   ],
   "3": [
-    { id: 1, content: "Thanks for the demo recap. I will share it with leadership tomorrow.", time: "Yesterday", isMe: false },
+    {
+      id: 1,
+      content: "Thanks for the demo recap. I will share it with leadership tomorrow.",
+      time: "Yesterday",
+      isMe: false,
+    },
   ],
   "4": [
-    { id: 1, content: "When is the earliest onboarding slot still open?", time: "Yesterday", isMe: false },
-    { id: 2, content: "We can likely reserve next Wednesday if we finalize today.", time: "Yesterday", isMe: true },
+    {
+      id: 1,
+      content: "When is the earliest onboarding slot still open?",
+      time: "Yesterday",
+      isMe: false,
+    },
+    {
+      id: 2,
+      content: "We can likely reserve next Wednesday if we finalize today.",
+      time: "Yesterday",
+      isMe: true,
+    },
   ],
   "5": [
-    { id: 1, content: "I reviewed the contract and have two final comments for legal.", time: "Yesterday", isMe: false },
+    {
+      id: 1,
+      content: "I reviewed the contract and have two final comments for legal.",
+      time: "Yesterday",
+      isMe: false,
+    },
   ],
 };
 
@@ -112,19 +214,10 @@ const channelButtonVariant = {
   whatsapp: "warning",
 } as const;
 
-const proposalTone = {
-  pending: "warning",
-  approved: "info",
-  rejected: "neutral",
-  executed: "success",
-  failed: "warning",
-} as const;
-
 function backendToUiChannel(channel: MessageChannel): UIChannel {
   if (channel === "api") {
     return "whatsapp";
   }
-
   return channel;
 }
 
@@ -132,36 +225,13 @@ function uiToBackendChannel(channel: UIChannel): MessageChannel {
   if (channel === "whatsapp") {
     return "api";
   }
-
   return channel;
-}
-
-function addHours(hours: number) {
-  return new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
-}
-
-function formatProposalDiff(proposal: AIActionProposal) {
-  const maybeDiff = proposal.diff_payload?.after;
-  if (!maybeDiff || typeof maybeDiff !== "object" || Array.isArray(maybeDiff)) {
-    return "";
-  }
-
-  return Object.entries(maybeDiff as Record<string, unknown>)
-    .slice(0, 4)
-    .map(([key, value]) => {
-      if (Array.isArray(value)) {
-        return `${key}: ${value.join(", ")}`;
-      }
-
-      return `${key}: ${String(value)}`;
-    })
-    .join(" | ");
 }
 
 function buildConversationState(
   messages: Awaited<ReturnType<typeof fetchMessages>>,
   contacts: Awaited<ReturnType<typeof fetchContacts>>,
-  companies: Awaited<ReturnType<typeof fetchCompanies>>,
+  companies: Awaited<ReturnType<typeof fetchCompanies>>
 ) {
   const contactMap = new Map(contacts.map((contact) => [contact.id, contact]));
   const companyMap = new Map(companies.map((company) => [company.id, company]));
@@ -169,8 +239,7 @@ function buildConversationState(
 
   [...messages]
     .sort(
-      (left, right) =>
-        new Date(left.created_at).getTime() - new Date(right.created_at).getTime(),
+      (left, right) => new Date(left.created_at).getTime() - new Date(right.created_at).getTime()
     )
     .forEach((message) => {
       const key = message.contact_id ?? message.deal_id ?? String(message.id);
@@ -184,8 +253,7 @@ function buildConversationState(
     .map(([threadId, threadMessages]) => {
       const latest = threadMessages[threadMessages.length - 1];
       const contact = latest.contact_id ? contactMap.get(latest.contact_id) : null;
-      const company =
-        contact?.company_id ? companyMap.get(contact.company_id)?.name : undefined;
+      const company = contact?.company_id ? companyMap.get(contact.company_id)?.name : undefined;
 
       threads[threadId] = threadMessages.map((message) => ({
         id: message.id,
@@ -210,24 +278,21 @@ function buildConversationState(
         sortAt: latest.created_at,
       };
     })
-    .sort(
-      (left, right) =>
-        new Date(right.sortAt).getTime() - new Date(left.sortAt).getTime(),
-    )
+    .sort((left, right) => new Date(right.sortAt).getTime() - new Date(left.sortAt).getTime())
     .map(({ sortAt: _sortAt, ...conversation }) => conversation);
 
   return { conversations, threads };
 }
 
+function addHours(hours: number): string {
+  const date = new Date();
+  date.setHours(date.getHours() + hours);
+  return date.toISOString();
+}
+
 export function MessagesPage() {
   const isMobile = useIsMobile();
-  const {
-    clearAssistantSelection,
-    connection,
-    isGuest,
-    setAssistantSelection,
-    user,
-  } = useCrmApp();
+  const { clearAssistantSelection, connection, isGuest, setAssistantSelection, user } = useCrmApp();
   const guestPreviewMessage =
     "Guest mode is showing demo inbox data so you can explore conversations without registration.";
   const [conversations, setConversations] = useState(fallbackConversations);
@@ -238,19 +303,14 @@ export function MessagesPage() {
   const [messages, setMessages] = useState(fallbackMessages);
   const [channelOverrides, setChannelOverrides] = useState<Record<string, UIChannel>>({});
   const [dataSource, setDataSource] = useState<"loading" | "live" | "preview">(
-    connection === "loading" ? "loading" : "preview",
+    connection === "loading" ? "loading" : "preview"
   );
-  const [threadProposals, setThreadProposals] = useState<AIActionProposal[]>([]);
-  const [threadEvidence, setThreadEvidence] = useState<GroundedEvidenceItem[]>([]);
-  const [threadTraceId, setThreadTraceId] = useState<string | null>(null);
-  const [isDraftingWithAi, setIsDraftingWithAi] = useState(false);
-  const [proposalDecisionId, setProposalDecisionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(
     connection === "fallback"
       ? "Backend connection is unavailable, so the inbox is showing preview data."
       : isGuest
         ? guestPreviewMessage
-      : null,
+        : null
   );
   const sourceTone =
     dataSource === "live" ? "success" : dataSource === "loading" || isGuest ? "info" : "warning";
@@ -263,10 +323,7 @@ export function MessagesPage() {
           ? "Guest inbox"
           : "Preview inbox";
 
-  const unreadCount = conversations.reduce(
-    (sum, conversation) => sum + conversation.unread,
-    0,
-  );
+  const unreadCount = conversations.reduce((sum, conversation) => sum + conversation.unread, 0);
 
   const loadInbox = async (preferredConversationId?: string) => {
     const [companyRecords, contactRecords, messageRecords] = await Promise.all([
@@ -275,11 +332,7 @@ export function MessagesPage() {
       fetchMessages(),
     ]);
 
-    const nextState = buildConversationState(
-      messageRecords,
-      contactRecords,
-      companyRecords,
-    );
+    const nextState = buildConversationState(messageRecords, contactRecords, companyRecords);
 
     setConversations(nextState.conversations);
     setMessages(nextState.threads);
@@ -287,7 +340,7 @@ export function MessagesPage() {
       const requestedId = preferredConversationId ?? previous;
       return nextState.conversations.some((conversation) => conversation.id === requestedId)
         ? requestedId
-        : nextState.conversations[0]?.id ?? "";
+        : (nextState.conversations[0]?.id ?? "");
     });
     setDataSource("live");
     setError(null);
@@ -299,6 +352,7 @@ export function MessagesPage() {
     }
   }, [isMobile]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: load function defined below
   useEffect(() => {
     if (connection === "loading") {
       setDataSource("loading");
@@ -310,7 +364,7 @@ export function MessagesPage() {
       setError(
         connection === "fallback"
           ? "Backend connection is unavailable, so the inbox is showing preview data."
-          : guestPreviewMessage,
+          : guestPreviewMessage
       );
       return;
     }
@@ -320,7 +374,7 @@ export function MessagesPage() {
     const sync = async () => {
       try {
         await loadInbox();
-      } catch (loadError) {
+      } catch (_loadError) {
         if (cancelled) {
           return;
         }
@@ -329,7 +383,7 @@ export function MessagesPage() {
         setError(
           isGuest
             ? guestPreviewMessage
-            : "Using preview conversation data because the live inbox could not be loaded.",
+            : "Using preview conversation data because the live inbox could not be loaded."
         );
       }
     };
@@ -339,22 +393,21 @@ export function MessagesPage() {
     return () => {
       cancelled = true;
     };
-  }, [connection]);
+  }, [connection, isGuest]);
 
   const filteredConversations = conversations.filter(
     (conversation) =>
       conversation.name.toLowerCase().includes(search.toLowerCase()) ||
-      conversation.company.toLowerCase().includes(search.toLowerCase()),
+      conversation.company.toLowerCase().includes(search.toLowerCase())
   );
 
   const activeConversation =
-    conversations.find((conversation) => conversation.id === selectedId) ??
-    conversations[0];
-  const activeMessages = activeConversation ? messages[activeConversation.id] ?? [] : [];
+    conversations.find((conversation) => conversation.id === selectedId) ?? conversations[0];
+  const activeMessages = activeConversation ? (messages[activeConversation.id] ?? []) : [];
   const activeMessageIds = activeMessages.map((message) => String(message.id));
-  const activeMessageIdsKey = activeMessageIds.join(",");
+  void activeMessageIds.join(",");
   const activeComposeChannel = activeConversation
-    ? channelOverrides[activeConversation.id] ?? activeConversation.channel
+    ? (channelOverrides[activeConversation.id] ?? activeConversation.channel)
     : "email";
 
   useEffect(() => {
@@ -383,56 +436,18 @@ export function MessagesPage() {
     };
   }, [
     activeConversation,
-    activeMessageIdsKey,
     clearAssistantSelection,
     dataSource,
     setAssistantSelection,
+    activeMessageIds,
   ]);
-
-  useEffect(() => {
-    if (dataSource !== "live" || !activeConversation) {
-      setThreadProposals([]);
-      if (dataSource !== "live") {
-        setThreadEvidence([]);
-        setThreadTraceId(null);
-      }
-      return;
-    }
-
-    setThreadEvidence([]);
-    setThreadTraceId(null);
-
-    let cancelled = false;
-
-    const syncProposals = async () => {
-      try {
-        const proposals = await fetchAiProposals({
-          threadId: activeConversation.id,
-          limit: 12,
-        });
-        if (!cancelled) {
-          setThreadProposals(proposals);
-        }
-      } catch {
-        if (!cancelled) {
-          setThreadProposals([]);
-        }
-      }
-    };
-
-    void syncProposals();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [activeConversation, dataSource]);
 
   const selectConversation = (id: string) => {
     setSelectedId(id);
     setConversations((previous) =>
       previous.map((conversation) =>
-        conversation.id === id ? { ...conversation, unread: 0 } : conversation,
-      ),
+        conversation.id === id ? { ...conversation, unread: 0 } : conversation
+      )
     );
     if (isMobile) {
       setMobileThreadOpen(true);
@@ -453,7 +468,7 @@ export function MessagesPage() {
           channel: uiToBackendChannel(activeComposeChannel),
           subject:
             activeComposeChannel === "email"
-              ? activeConversation.subject ?? `Follow-up from ${activeConversation.name}`
+              ? (activeConversation.subject ?? `Follow-up from ${activeConversation.name}`)
               : null,
           body: value,
           payload_meta: { source: "messages-page" },
@@ -464,8 +479,7 @@ export function MessagesPage() {
         toast.success("Message queued", {
           description: `Your ${activeComposeChannel} reply to ${activeConversation.name} is ready.`,
         });
-      } catch (sendError) {
-        // Error handled by toast
+      } catch (_sendError) {
         toast.error("Could not send message", {
           description: "The live CRM message could not be created right now.",
         });
@@ -496,8 +510,8 @@ export function MessagesPage() {
               unread: 0,
               channel: activeComposeChannel,
             }
-          : conversation,
-      ),
+          : conversation
+      )
     );
     setInput("");
     toast.success("Message queued", {
@@ -516,8 +530,8 @@ export function MessagesPage() {
     if (dataSource !== "live") {
       setConversations((previous) =>
         previous.map((conversation) =>
-          conversation.id === activeConversation.id ? { ...conversation, channel } : conversation,
-        ),
+          conversation.id === activeConversation.id ? { ...conversation, channel } : conversation
+        )
       );
     }
 
@@ -540,44 +554,6 @@ export function MessagesPage() {
 
   const draftReply = async (mode: "reply" | "ai" | "followup") => {
     if (!activeConversation) {
-      return;
-    }
-
-    if (mode === "ai" && dataSource === "live") {
-      setIsDraftingWithAi(true);
-
-      try {
-        const response = await sendInboxCopilotMessage({
-          prompt:
-            "Draft a concise reply for this inbox thread and suggest the next CRM action.",
-          thread_id: activeConversation.id,
-          message_ids: activeMessageIds,
-          contact_id: activeConversation.contactId ?? undefined,
-          deal_id: activeConversation.dealId ?? undefined,
-          page: "Messages",
-          tone: "warm",
-        });
-
-        setInput(response.content);
-        setThreadEvidence(response.evidence);
-        setThreadProposals(response.proposed_actions);
-        setThreadTraceId(response.trace_id);
-
-        toast.success("Grounded AI draft ready", {
-          description:
-            response.proposed_actions.length > 0
-              ? `${response.proposed_actions.length} approval-gated action${response.proposed_actions.length === 1 ? "" : "s"} are ready for review.`
-              : `The reply was grounded in ${activeConversation.name}'s live thread.`,
-        });
-      } catch (draftError) {
-        // Error handled by toast
-        toast.error("AI draft unavailable", {
-          description: "The inbox copilot could not build a grounded reply right now.",
-        });
-      } finally {
-        setIsDraftingWithAi(false);
-      }
-
       if (isMobile) {
         setMobileThreadOpen(true);
       }
@@ -597,7 +573,7 @@ export function MessagesPage() {
       setMobileThreadOpen(true);
     }
 
-    toast.success(mode === "ai" ? "AI draft ready" : "Reply prepared", {
+    toast.success(mode === "ai" ? "AgentP draft ready" : "Reply prepared", {
       description:
         mode === "followup"
           ? `A follow-up reply was prepared for ${activeConversation.name}.`
@@ -605,64 +581,8 @@ export function MessagesPage() {
     });
   };
 
-  const handleApproveProposal = async (proposalId: string) => {
-    if (!activeConversation) {
-      return;
-    }
-
-    setProposalDecisionId(proposalId);
-    try {
-      const response = await approveAiProposal(proposalId);
-      setThreadProposals((previous) =>
-        previous.map((proposal) =>
-          proposal.id === proposalId ? response.proposal : proposal,
-        ),
-      );
-      await loadInbox(activeConversation.id);
-      toast.success("AI action approved", {
-        description:
-          response.execution?.detail ??
-          `${response.proposal.title} was executed inside the local CRM.`,
-      });
-    } catch (decisionError) {
-      // Error handled by toast
-      toast.error("Could not approve action", {
-        description: "The proposal could not be executed right now.",
-      });
-    } finally {
-      setProposalDecisionId(null);
-    }
-  };
-
-  const handleRejectProposal = async (proposalId: string) => {
-    setProposalDecisionId(proposalId);
-    try {
-      const response = await rejectAiProposal(
-        proposalId,
-        "Rejected from the inbox thread.",
-      );
-      setThreadProposals((previous) =>
-        previous.map((proposal) =>
-          proposal.id === proposalId ? response.proposal : proposal,
-        ),
-      );
-      toast.success("AI action rejected", {
-        description: "The proposal was explicitly declined and left unexecuted.",
-      });
-    } catch (decisionError) {
-      // Error handled by toast
-      toast.error("Could not reject action", {
-        description: "The proposal status could not be updated right now.",
-      });
-    } finally {
-      setProposalDecisionId(null);
-    }
-  };
-
   const handleCreateTaskFromThread = async () => {
-    if (!activeConversation) {
-      return;
-    }
+    if (!activeConversation) return;
 
     if (dataSource === "live") {
       try {
@@ -679,13 +599,11 @@ export function MessagesPage() {
         toast.success("Follow-up task created", {
           description: `${activeConversation.name} is now in the task queue.`,
         });
-      } catch (createError) {
-        // Error handled by toast
+      } catch (_createError) {
         toast.error("Could not create task", {
           description: "The follow-up task could not be saved right now.",
         });
       }
-
       return;
     }
 
@@ -713,14 +631,15 @@ export function MessagesPage() {
             label="Reply"
             icon={Send}
             variant={activeConversation ? channelButtonVariant[activeComposeChannel] : "outline"}
-            disabled={!activeConversation || isDraftingWithAi}
+            disabled={!activeConversation}
             onClick={() => {
               void draftReply("reply");
             }}
             items={[
               {
-                label: "Generate AI reply",
-                description: "Draft a context-aware response using the last message and the current channel.",
+                label: "Generate AgentP reply",
+                description:
+                  "Draft a context-aware response using the last message and the current channel.",
                 icon: Bot,
                 onSelect: () => {
                   void draftReply("ai");
@@ -728,7 +647,8 @@ export function MessagesPage() {
               },
               {
                 label: "Queue follow-up sequence",
-                description: "Prepare a softer reminder that can be used when the thread goes cold.",
+                description:
+                  "Prepare a softer reminder that can be used when the thread goes cold.",
                 onSelect: () => {
                   void draftReply("followup");
                 },
@@ -757,9 +677,7 @@ export function MessagesPage() {
             <div className="flex min-h-0 flex-col border-b border-border/70 md:w-[22rem] md:border-r md:border-b-0">
               <div className="space-y-4 border-b border-border/70 px-4 py-4">
                 <div>
-                  <p className="text-sm font-semibold text-foreground">
-                    Conversation List
-                  </p>
+                  <p className="text-sm font-semibold text-foreground">Conversation List</p>
                   <p className="text-sm text-muted-foreground">
                     Prioritized by unread activity and deal urgency
                   </p>
@@ -788,9 +706,10 @@ export function MessagesPage() {
 
                   return (
                     <button
+                      type="button"
                       key={conversation.id}
                       onClick={() => selectConversation(conversation.id)}
-                    className={`mb-2 w-full rounded-[calc(var(--radius)+4px)] border p-4 text-left transition-colors ${
+                      className={`mb-2 w-full rounded-[calc(var(--radius)+4px)] border p-4 text-left transition-colors ${
                         active
                           ? "border-primary/20 bg-primary/15"
                           : "border-border/80 bg-surface-strong/70 hover:border-primary/14 hover:bg-surface-strong"
@@ -821,9 +740,7 @@ export function MessagesPage() {
                               {conversation.channel}
                             </StatusBadge>
                             {conversation.unread > 0 ? (
-                              <StatusBadge tone="warning">
-                                {conversation.unread} unread
-                              </StatusBadge>
+                              <StatusBadge tone="warning">{conversation.unread} unread</StatusBadge>
                             ) : null}
                             <span className="truncate text-xs text-muted-foreground">
                               {conversation.company}
@@ -868,9 +785,7 @@ export function MessagesPage() {
                       {activeConversation.online ? "Online" : "Offline"}
                     </StatusBadge>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    {activeConversation.company}
-                  </p>
+                  <p className="text-sm text-muted-foreground">{activeConversation.company}</p>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -893,115 +808,6 @@ export function MessagesPage() {
                 </div>
               </div>
 
-              {threadEvidence.length > 0 || threadProposals.length > 0 ? (
-                <div className="border-b border-border/70 px-4 py-4 sm:px-5">
-                  <div className="space-y-3">
-                    {threadTraceId ? (
-                      <div className="flex flex-wrap items-center gap-2">
-                        <StatusBadge tone="info">Grounded thread</StatusBadge>
-                        <span className="text-xs text-muted-foreground">
-                          Trace {threadTraceId.slice(0, 12)}
-                        </span>
-                      </div>
-                    ) : null}
-
-                    {threadEvidence.length > 0 ? (
-                      <div className="space-y-2">
-                        <p className="text-xs font-semibold tracking-[0.14em] text-muted-foreground uppercase">
-                          Evidence
-                        </p>
-                        <div className="grid gap-2 md:grid-cols-2">
-                          {threadEvidence.slice(0, 4).map((item) => (
-                            <div
-                              key={item.id}
-                              className="rounded-[calc(var(--radius)+2px)] border border-border/80 bg-surface-strong/70 px-3 py-3"
-                            >
-                              <div className="flex items-center justify-between gap-2">
-                                <p className="truncate text-sm font-semibold text-foreground">
-                                  {item.title}
-                                </p>
-                                <StatusBadge tone="info">{item.source}</StatusBadge>
-                              </div>
-                              <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                                {item.snippet}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ) : null}
-
-                    {threadProposals.length > 0 ? (
-                      <div className="space-y-2">
-                        <p className="text-xs font-semibold tracking-[0.14em] text-muted-foreground uppercase">
-                          Approval-gated actions
-                        </p>
-                        <div className="space-y-2">
-                          {threadProposals.map((proposal) => (
-                            <div
-                              key={proposal.id}
-                              className="rounded-[calc(var(--radius)+2px)] border border-border/80 bg-surface-strong/70 px-3 py-3"
-                            >
-                              <div className="flex flex-wrap items-start justify-between gap-2">
-                                <div className="min-w-0 flex-1">
-                                  <div className="flex flex-wrap items-center gap-2">
-                                    <p className="text-sm font-semibold text-foreground">
-                                      {proposal.title}
-                                    </p>
-                                    <StatusBadge
-                                      tone={
-                                        proposalTone[
-                                          proposal.status as keyof typeof proposalTone
-                                        ] ?? "info"
-                                      }
-                                    >
-                                      {proposal.status}
-                                    </StatusBadge>
-                                  </div>
-                                  <p className="mt-1 text-sm text-muted-foreground">
-                                    {proposal.detail ?? proposal.reasoning ?? "No extra detail."}
-                                  </p>
-                                  {formatProposalDiff(proposal) ? (
-                                    <p className="mt-2 text-xs text-muted-foreground">
-                                      {formatProposalDiff(proposal)}
-                                    </p>
-                                  ) : null}
-                                </div>
-
-                                {proposal.status === "pending" ? (
-                                  <div className="flex items-center gap-2">
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      disabled={proposalDecisionId === proposal.id}
-                                      onClick={() => {
-                                        void handleRejectProposal(proposal.id);
-                                      }}
-                                    >
-                                      Reject
-                                    </Button>
-                                    <Button
-                                      variant="success"
-                                      size="sm"
-                                      disabled={proposalDecisionId === proposal.id}
-                                      onClick={() => {
-                                        void handleApproveProposal(proposal.id);
-                                      }}
-                                    >
-                                      Approve
-                                    </Button>
-                                  </div>
-                                ) : null}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-              ) : null}
-
               <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4 sm:px-5">
                 {activeMessages.map((message) => (
                   <div
@@ -1016,16 +822,14 @@ export function MessagesPage() {
                       }`}
                     >
                       <p className="text-sm leading-6">{message.content}</p>
-                      <p className="mt-2 text-xs text-muted-foreground">
-                        {message.time}
-                      </p>
+                      <p className="mt-2 text-xs text-muted-foreground">{message.time}</p>
                     </div>
                   </div>
                 ))}
               </div>
 
               <div className="border-t border-border/70 px-4 py-4 sm:px-5">
-                <div className="flex items-center gap-2 rounded-[calc(var(--radius)+4px)] border border-border/80 bg-surface-strong/70 p-2">
+                <div className="flex items-center gap-2 rounded-[calc(var(--radius)+4px)] border border-border/80 bg-surface-strong/70 p-2 transition-all duration-200 hover:border-primary/15 hover:shadow-sm">
                   <Button
                     variant="outline"
                     size="icon"

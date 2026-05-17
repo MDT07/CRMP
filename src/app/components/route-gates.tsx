@@ -4,13 +4,7 @@ import { useCrmApp } from "../providers/CrmProvider";
 import { BrandLockup } from "./Brand";
 import { StatusBadge } from "./crm-ui";
 
-function AppSplash({
-  title,
-  detail,
-}: {
-  title: string;
-  detail: string;
-}) {
+function AppSplash({ title, detail }: { title: string; detail: string }) {
   return (
     <div className="relative min-h-screen overflow-hidden bg-background text-foreground">
       <div className="pointer-events-none absolute inset-0 crm-shell-bg" />

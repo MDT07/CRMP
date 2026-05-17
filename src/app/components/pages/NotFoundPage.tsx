@@ -55,7 +55,8 @@ export function NotFoundPage() {
               The route does not match an active CRM view
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
-              This usually happens when an old link, manual URL, or stale redirect points to a page that does not exist anymore.
+              This usually happens when an old link, manual URL, or stale redirect points to a page
+              that does not exist anymore.
             </p>
           </div>
         </div>

@@ -40,9 +40,7 @@ export function getPageContext(input: {
   };
 }
 
-export function getSelectionContext(
-  selection: Record<string, unknown> | null | undefined = null,
-) {
+export function getSelectionContext(selection: Record<string, unknown> | null | undefined = null) {
   if (!selection) {
     return { selected_items: [] as unknown[], selected_entities: [] as unknown[] };
   }
@@ -100,7 +98,7 @@ export interface InboxAssistantSelection extends Record<string, unknown> {
 }
 
 export function isInboxAssistantSelection(
-  selection: Record<string, unknown> | null | undefined,
+  selection: Record<string, unknown> | null | undefined
 ): selection is InboxAssistantSelection {
   if (!selection) {
     return false;
@@ -130,7 +128,7 @@ const SAFE_ACTIONS = new Set([
 
 export async function executePermittedAction(
   actionId: string,
-  payload: Record<string, unknown> = {},
+  payload: Record<string, unknown> = {}
 ): Promise<AssistantActionResult> {
   if (!SAFE_ACTIONS.has(actionId)) {
     return {

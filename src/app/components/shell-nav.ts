@@ -1,14 +1,14 @@
 import type { LucideIcon } from "lucide-react";
 import {
   BarChart3,
-  Bot,
+  Building2,
   CheckSquare,
   FolderKanban,
   GitBranch,
   LayoutDashboard,
   LifeBuoy,
-  Megaphone,
   Mail,
+  Megaphone,
   Radar,
   Settings,
   Users,
@@ -39,7 +39,7 @@ export const navGroups: NavGroup[] = [
         description: "Dashboard and overview",
       },
       {
-        path: "/inbox",
+        path: "/messages",
         icon: Mail,
         label: "Inbox",
         description: "Unified communication",
@@ -68,11 +68,23 @@ export const navGroups: NavGroup[] = [
         label: "Contacts",
         description: "People and companies",
       },
+      {
+        path: "/accounts",
+        icon: Building2,
+        label: "Accounts",
+        description: "Account intelligence",
+      },
     ],
   },
   {
-    label: "Insights",
+    label: "Growth",
     items: [
+      {
+        path: "/campaigns",
+        icon: Megaphone,
+        label: "Campaigns",
+        description: "Lifecycle plays",
+      },
       {
         path: "/analytics",
         icon: BarChart3,
@@ -88,20 +100,8 @@ export const navGroups: NavGroup[] = [
     ],
   },
   {
-    label: "Operations",
+    label: "Delivery",
     items: [
-      {
-        path: "/automations",
-        icon: Zap,
-        label: "AI & Automations",
-        description: "Rules and Swarm AI",
-      },
-      {
-        path: "/crm-agent",
-        icon: Bot,
-        label: "CRM Agent",
-        description: "AI copilot for CRM tasks",
-      },
       {
         path: "/projects",
         icon: FolderKanban,
@@ -109,16 +109,21 @@ export const navGroups: NavGroup[] = [
         description: "Post-win delivery",
       },
       {
-        path: "/campaigns",
-        icon: Megaphone,
-        label: "Campaigns",
-        description: "Lifecycle plays",
-      },
-      {
         path: "/service",
         icon: LifeBuoy,
         label: "Service",
         description: "SLA queue and retention",
+      },
+    ],
+  },
+  {
+    label: "System",
+    items: [
+      {
+        path: "/automations",
+        icon: Zap,
+        label: "Automations",
+        description: "Rules and Workflows",
       },
     ],
   },
@@ -133,19 +138,18 @@ export const bottomNavItems: ShellNavItem[] = [
   },
 ];
 
-export const primaryNavItems: ShellNavItem[] = navGroups
-  .find((group) => group.label === "Workspace")
-  ?.items || [];
+export const primaryNavItems: ShellNavItem[] =
+  navGroups.find((group) => group.label === "Workspace")?.items || [];
 
-export const secondaryNavItems: ShellNavItem[] = navGroups
-  .find((group) => group.label === "Operations")
-  ?.items || [];
+export const secondaryNavItems: ShellNavItem[] =
+  navGroups.find((group) => group.label === "Growth")?.items || [];
 
 const pageMetaEntries = [
   {
     match: (pathname: string) => pathname === "/",
     title: "Growth Overview",
-    description: "One operating view for revenue, pipeline health, and conversations that need action.",
+    description:
+      "One operating view for revenue, pipeline health, and conversations that need action.",
   },
   {
     match: (pathname: string) => pathname.startsWith("/clients"),
@@ -208,11 +212,6 @@ const pageMetaEntries = [
     description: "Protect customer health with SLA triage, escalations, and resolution playbooks.",
   },
   {
-    match: (pathname: string) => pathname.startsWith("/crm-agent"),
-    title: "CRM Agent",
-    description: "AI-powered CRM assistant for contact analysis, deal scoring, email drafting, and strategic guidance.",
-  },
-  {
     match: (pathname: string) => pathname.startsWith("/settings"),
     title: "Workspace Settings",
     description: "Adjust preferences, connections, and account controls.",
@@ -241,7 +240,6 @@ const knownAppPaths = [
   "/forecast",
   "/analytics",
   "/service",
-  "/crm-agent",
   "/settings",
 ] as const;
 

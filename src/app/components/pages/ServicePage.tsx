@@ -1,4 +1,3 @@
-import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -7,7 +6,9 @@ import {
   LifeBuoy,
   ShieldAlert,
 } from "lucide-react";
-
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
+import { buildPageAssistantSelection } from "../../lib/assistant-hooks";
 import {
   fetchMessages,
   fetchTasks,
@@ -15,7 +16,6 @@ import {
   type Task,
   type TaskStatus,
 } from "../../lib/crm-api";
-import { buildPageAssistantSelection } from "../../lib/assistant-hooks";
 import { useCrmApp } from "../../providers/CrmProvider";
 import { MetricCard, PageHeader, StatusBadge, SurfaceCard } from "../crm-ui";
 import { Button } from "../ui/button";
@@ -99,7 +99,10 @@ function buildTickets(messages: Message[], tasks: Task[]): ServiceTicket[] {
       inboundMessages[index % inboundMessages.length];
 
     const createdAt = linkedMessage?.created_at ?? task.created_at;
-    const ageHours = Math.max(1, Math.round((Date.now() - new Date(createdAt).getTime()) / 3600000));
+    const ageHours = Math.max(
+      1,
+      Math.round((Date.now() - new Date(createdAt).getTime()) / 3600000)
+    );
 
     return {
       id: task.id,
@@ -114,16 +117,11 @@ function buildTickets(messages: Message[], tasks: Task[]): ServiceTicket[] {
 }
 
 export function ServicePage() {
-  const {
-    clearAssistantSelection,
-    connection,
-    isGuest,
-    setAssistantSelection,
-    workspace,
-  } = useCrmApp();
+  const { clearAssistantSelection, connection, isGuest, setAssistantSelection, workspace } =
+    useCrmApp();
   const [tickets, setTickets] = useState<ServiceTicket[]>(previewTickets);
   const [source, setSource] = useState<"loading" | "live" | "preview">(
-    connection === "loading" ? "loading" : "preview",
+    connection === "loading" ? "loading" : "preview"
   );
   const [error, setError] = useState<string | null>(null);
 
@@ -138,7 +136,7 @@ export function ServicePage() {
       setError(
         connection === "fallback"
           ? "Service queue is in preview because backend sync is unavailable."
-          : "Guest mode keeps service analytics in preview.",
+          : "Guest mode keeps service analytics in preview."
       );
       setTickets(previewTickets);
       return;
@@ -181,7 +179,7 @@ export function ServicePage() {
         dataSource: source,
         selectedEntities: [],
         summary: "Customer service queue and SLA context",
-      }),
+      })
     );
 
     return () => {
@@ -191,7 +189,7 @@ export function ServicePage() {
 
   const openTickets = tickets.filter((ticket) => ticket.status !== "done");
   const slaRiskCount = openTickets.filter(
-    (ticket) => ticket.priority === "High" || ticket.ageHours >= 8,
+    (ticket) => ticket.priority === "High" || ticket.ageHours >= 8
   ).length;
   const avgFirstResponseHours =
     openTickets.length > 0
@@ -229,7 +227,7 @@ export function ServicePage() {
         tone: "success" as const,
       },
     ],
-    [],
+    []
   );
 
   return (
@@ -245,11 +243,24 @@ export function ServicePage() {
         }
         actions={
           <>
-            <Button variant="outline">
+            <Button
+              variant="outline"
+              onClick={() => {
+                toast.success("Resolve batch", {
+                  description: "Bulk resolution workflow will process selected tickets.",
+                });
+              }}
+            >
               <CheckCircle2 className="size-4" />
               Resolve batch
             </Button>
-            <Button>
+            <Button
+              onClick={() => {
+                toast.info("New service task", {
+                  description: "Service task creation form will open here.",
+                });
+              }}
+            >
               <LifeBuoy className="size-4" />
               New service task
             </Button>
@@ -306,7 +317,7 @@ export function ServicePage() {
             {openTickets.map((ticket) => (
               <div
                 key={ticket.id}
-                className="rounded-[calc(var(--radius)-1px)] border border-border/80 bg-card px-3 py-3"
+                className="rounded-[calc(var(--radius)-1px)] border border-border/80 bg-card px-3 py-3 transition-all duration-200 hover:border-primary/15 hover:shadow-md"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-sm font-semibold text-foreground">{ticket.subject}</p>
@@ -341,7 +352,7 @@ export function ServicePage() {
             {responsePlaybooks.map((playbook) => (
               <div
                 key={playbook.title}
-                className="rounded-[calc(var(--radius)-2px)] border border-border/80 bg-card px-3 py-3"
+                className="rounded-[calc(var(--radius)-2px)] border border-border/80 bg-card px-3 py-3 transition-all duration-200 hover:border-primary/15 hover:shadow-sm"
               >
                 <div className="flex items-center gap-2">
                   {playbook.tone === "warning" ? (

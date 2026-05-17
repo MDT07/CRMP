@@ -1,9 +1,9 @@
 import { Suspense } from "react";
 import { RouterProvider } from "react-router";
-import { router } from "./routes";
 import { Toaster } from "./components/ui/sonner";
 import { CrmProvider } from "./providers/CrmProvider";
 import { ThemeProvider } from "./providers/ThemeProvider";
+import { router } from "./routes";
 
 export default function App() {
   return (

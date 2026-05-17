@@ -1,13 +1,5 @@
 import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type KeyboardEvent as ReactKeyboardEvent,
-} from "react";
-import {
   Bell,
-  Bot,
   CalendarClock,
   ChevronDown,
   Command,
@@ -17,8 +9,11 @@ import {
   Plus,
   Settings2,
   SunMedium,
-  Search,
 } from "lucide-react";
+import {
+  useEffect,
+  useState,
+} from "react";
 import { useLocation, useNavigate } from "react-router";
 import { toast } from "sonner";
 
@@ -29,7 +24,7 @@ import { useTheme } from "../providers/ThemeProvider";
 import { BrandMark } from "./Brand";
 import { StatusBadge } from "./crm-ui";
 import { SmartActionButton } from "./crm-ui/smart-action-button";
-import { getPageMeta, primaryNavItems, secondaryNavItems } from "./shell-nav";
+import { getPageMeta } from "./shell-nav";
 import { Button } from "./ui/button";
 import {
   Dialog,
@@ -63,13 +58,6 @@ interface HeaderPulse {
 }
 
 type UserPresence = "available" | "focus" | "dnd";
-
-interface QuickSearchItem {
-  path: string;
-  label: string;
-  description: string;
-  scope: "workspace" | "platform";
-}
 
 const USER_PRESENCE_STORAGE_KEY = "crmp.user.presence";
 
@@ -175,9 +163,7 @@ function getHeaderPulse(pathname: string, workspace: Workspace): HeaderPulse {
   return { label: "Workspace", value: workspace.name };
 }
 
-export function TopBar({
-  onOpenNavigation,
-}: TopBarProps) {
+export function TopBar({ onOpenNavigation }: TopBarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { connection, isGuest, signOut, user, workspace } = useCrmApp();
@@ -215,67 +201,17 @@ export function TopBar({
       ? "Guest access"
       : connection === "fallback"
         ? "Preview workspace"
-        : workspace.domain ?? "Workspace access");
-  const quickSearchItems = useMemo<QuickSearchItem[]>(
-    () => [
-      ...primaryNavItems.map((item) => ({
-        path: item.path,
-        label: item.label,
-        description: item.description,
-        scope: "workspace" as const,
-      })),
-      ...secondaryNavItems.map((item) => ({
-        path: item.path,
-        label: item.label,
-        description: item.description,
-        scope: "platform" as const,
-      })),
-      {
-        path: "/ai-assistant",
-        label: "AI Workspace",
-        description: "Dedicated copilot workspace",
-        scope: "platform",
-      },
-    ],
-    [],
-  );
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [activeSearchIndex, setActiveSearchIndex] = useState(0);
+        : (workspace.domain ?? "Workspace access"));
   const [presence, setPresence] = useState<UserPresence>("available");
   const [quickTaskOpen, setQuickTaskOpen] = useState(false);
   const [quickTaskTitle, setQuickTaskTitle] = useState("");
   const [quickTaskClient, setQuickTaskClient] = useState("");
   const [quickTaskDueDate, setQuickTaskDueDate] = useState("");
   const [quickTaskSaving, setQuickTaskSaving] = useState(false);
-  const searchInputRef = useRef<HTMLInputElement>(null);
-
-  const searchResults = useMemo(() => {
-    const normalizedQuery = searchQuery.trim().toLowerCase();
-    if (!normalizedQuery) {
-      return quickSearchItems.slice(0, 7);
-    }
-
-    return quickSearchItems
-      .filter((item) =>
-        `${item.label} ${item.description} ${item.path}`
-          .toLowerCase()
-          .includes(normalizedQuery),
-      )
-      .slice(0, 7);
-  }, [quickSearchItems, searchQuery]);
-
-  useEffect(() => {
-    setActiveSearchIndex(0);
-  }, [searchQuery]);
 
   useEffect(() => {
     const storedPresence = window.localStorage.getItem(USER_PRESENCE_STORAGE_KEY);
-    if (
-      storedPresence === "available"
-      || storedPresence === "focus"
-      || storedPresence === "dnd"
-    ) {
+    if (storedPresence === "available" || storedPresence === "focus" || storedPresence === "dnd") {
       setPresence(storedPresence);
     }
   }, []);
@@ -286,18 +222,8 @@ export function TopBar({
 
   useEffect(() => {
     const handleShortcut = (event: KeyboardEvent) => {
-      const isKShortcut = (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k";
       const isQuickCaptureShortcut =
-        (event.metaKey || event.ctrlKey)
-        && event.shiftKey
-        && event.key.toLowerCase() === "n";
-
-      if (isKShortcut) {
-        event.preventDefault();
-        setSearchOpen(true);
-        searchInputRef.current?.focus();
-        return;
-      }
+        (event.metaKey || event.ctrlKey) && event.shiftKey && event.key.toLowerCase() === "n";
 
       if (isQuickCaptureShortcut) {
         event.preventDefault();
@@ -308,54 +234,6 @@ export function TopBar({
     window.addEventListener("keydown", handleShortcut);
     return () => window.removeEventListener("keydown", handleShortcut);
   }, []);
-
-  const navigateFromSearch = (path: string) => {
-    navigate(path);
-    setSearchOpen(false);
-    setSearchQuery("");
-    setActiveSearchIndex(0);
-    searchInputRef.current?.blur();
-  };
-
-  const handleSearchKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "ArrowDown") {
-      event.preventDefault();
-      setSearchOpen(true);
-      setActiveSearchIndex((index) => {
-        if (!searchResults.length) {
-          return 0;
-        }
-        return (index + 1) % searchResults.length;
-      });
-      return;
-    }
-
-    if (event.key === "ArrowUp") {
-      event.preventDefault();
-      setSearchOpen(true);
-      setActiveSearchIndex((index) => {
-        if (!searchResults.length) {
-          return 0;
-        }
-        return (index - 1 + searchResults.length) % searchResults.length;
-      });
-      return;
-    }
-
-    if (event.key === "Enter") {
-      event.preventDefault();
-      const target = searchResults[activeSearchIndex] ?? searchResults[0];
-      if (target) {
-        navigateFromSearch(target.path);
-      }
-      return;
-    }
-
-    if (event.key === "Escape") {
-      setSearchOpen(false);
-      searchInputRef.current?.blur();
-    }
-  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -426,290 +304,221 @@ export function TopBar({
 
   return (
     <>
-      <header className="sticky top-0 z-30 border-b border-border bg-canvas-strong">
-        <div className="flex h-14 items-center gap-2 px-3 sm:px-4 lg:px-5">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="md:hidden"
-          onClick={onOpenNavigation}
-          aria-label="Open navigation"
-        >
-          <Menu className="size-4" />
-        </Button>
+      <header className="sticky top-0 z-30 border-b border-border/50 bg-card/80 backdrop-blur-xl">
+        <div className="flex h-12 items-center gap-2 px-3 sm:px-4 lg:px-5">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden"
+            onClick={onOpenNavigation}
+            aria-label="Open navigation"
+          >
+            <Menu className="size-4" />
+          </Button>
 
-        <button
-          onClick={() => navigate("/")}
-          className="flex min-w-0 items-center gap-2.5 rounded-[calc(var(--radius)-3px)] px-1.5 py-1 transition-colors hover:bg-accent"
-          aria-label="Go to CRMP by EmirCo home"
-        >
-          <BrandMark size="sm" className="hidden size-8 rounded-[0.8rem] shadow-none sm:flex" />
-          <div className="min-w-0 text-left">
-            <p className="truncate text-[0.6rem] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
-              {workspace.name}
-            </p>
-            <p className="truncate text-sm font-semibold text-foreground">{meta.title}</p>
-          </div>
-        </button>
+          <button
+            type="button"
+            onClick={() => navigate("/")}
+            className="flex min-w-0 items-center gap-2.5 rounded-[calc(var(--radius)-3px)] px-1.5 py-1 transition-colors hover:bg-accent"
+            aria-label="Go to CRMP by EmirCo home"
+          >
+            <BrandMark size="sm" className="hidden size-8 rounded-[0.8rem] shadow-none sm:flex" />
+            <div className="min-w-0 text-left">
+              <p className="truncate text-[0.6rem] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+                {workspace.name}
+              </p>
+              <p className="truncate text-sm font-semibold text-foreground">{meta.title}</p>
+            </div>
+          </button>
 
-        <div className="hidden min-w-0 flex-1 lg:block">
-          <div className="relative max-w-xl">
-            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              ref={searchInputRef}
-              value={searchQuery}
-              onChange={(event) => {
-                setSearchQuery(event.target.value);
-                setSearchOpen(true);
-              }}
-              onFocus={() => setSearchOpen(true)}
-              onBlur={() => setSearchOpen(false)}
-              onKeyDown={handleSearchKeyDown}
-              placeholder={`Search ${meta.title.toLowerCase()}, deals, contacts, or conversations...`}
-              className="h-8 rounded-lg border-border bg-surface-muted pl-9 pr-14 text-sm shadow-none focus-visible:ring-0"
+          <div className="ml-auto flex items-center gap-2">
+            <div className="hidden xl:flex items-center gap-1.5">
+              <StatusBadge tone={connectionTone}>{connectionLabel}</StatusBadge>
+              <span className="inline-flex h-7 items-center rounded-full border border-border bg-surface-muted px-2.5 text-[0.66rem] font-medium text-muted-foreground">
+                {pulse.label}: {pulse.value}
+              </span>
+            </div>
+
+            <SmartActionButton
+              label="Quick Add"
+              icon={Plus}
+              variant="outline"
+              className="hidden sm:inline-flex"
+              onClick={() => navigate("/pipeline")}
+              items={[
+                {
+                  label: "Open deal board",
+                  description: "Jump straight to pipeline and create the next opportunity.",
+                  onSelect: () => navigate("/pipeline"),
+                },
+                {
+                  label: "Capture task",
+                  description: "Create a task instantly from the header command bar.",
+                  icon: CalendarClock,
+                  onSelect: openQuickTaskDialog,
+                },
+                {
+                  label: "Open contact intake",
+                  description: "Add or enrich a contact from the contacts workspace.",
+                  onSelect: () => navigate("/clients"),
+                },
+              ]}
             />
-            <button
-              type="button"
-              onClick={() => {
-                setSearchOpen(true);
-                searchInputRef.current?.focus();
-              }}
-              className="absolute top-1/2 right-2 inline-flex -translate-y-1/2 items-center gap-1 rounded-full border border-border bg-background px-2 py-0.5 font-mono text-xs text-muted-foreground transition-colors hover:border-primary hover:text-foreground"
-              aria-label="Open quick search"
+
+            <Button
+              variant="outline"
+              size="icon"
+              className="sm:hidden"
+              onClick={openQuickTaskDialog}
+              aria-label="Quick capture task"
             >
-              <Command className="size-3" />K
-            </button>
+              <Plus className="size-4" />
+            </Button>
 
-            {searchOpen ? (
-              <div className="absolute top-[calc(100%+0.4rem)] left-0 z-40 w-full rounded-xl border border-border bg-popover p-1.5 shadow-[var(--shadow-elevated)]">
-                {searchResults.length > 0 ? (
-                  <div className="grid gap-1">
-                    {searchResults.map((item, index) => (
-                      <button
-                        key={item.path}
-                        onMouseDown={(event) => event.preventDefault()}
-                        onClick={() => navigateFromSearch(item.path)}
-                          className={cn(
-                          "flex items-center justify-between gap-3 rounded-lg border border-transparent px-2.5 py-2 text-left transition-colors",
-                          index === activeSearchIndex
-                            ? "border-primary bg-primary"
-                            : "hover:border-border hover:bg-surface-strong",
-                        )}
-                      >
-                        <div className="min-w-0">
-                          <p className="truncate text-[0.78rem] font-semibold text-foreground">
-                            {item.label}
-                          </p>
-                          <p className="truncate text-xs text-muted-foreground">
-                            {item.description}
-                          </p>
-                        </div>
-                        <span className="shrink-0 rounded-full border border-border bg-surface-muted px-2 py-0.5 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                          {item.scope}
-                        </span>
-                      </button>
-                    ))}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="relative"
+              onClick={toggleTheme}
+              aria-label={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              {resolvedTheme === "dark" ? (
+                <SunMedium className="size-4" />
+              ) : (
+                <MoonStar className="size-4" />
+              )}
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              className="relative"
+              aria-label="Notifications"
+              onClick={() => navigate("/messages")}
+            >
+              <Bell className="size-4" />
+              {workspace.stats.messages > 0 ? (
+                <span className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-warning" />
+              ) : null}
+            </Button>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="group flex items-center gap-2.5 rounded-[calc(var(--radius)-3px)] border border-border bg-surface-muted px-2.5 py-1.5 transition-colors hover:border-primary hover:bg-accent"
+                >
+                  <div className="flex size-8 items-center justify-center rounded-lg border border-primary bg-primary font-metric text-[0.82rem] font-semibold text-primary-foreground">
+                    {userInitial}
                   </div>
-                ) : (
-                  <p className="px-2.5 py-2 text-sm text-muted-foreground">
-                    No matching workspace sections.
-                  </p>
-                )}
-              </div>
-            ) : null}
-          </div>
-        </div>
-
-        <div className="ml-auto flex items-center gap-2">
-          <div className="hidden xl:flex items-center gap-1.5">
-            <StatusBadge tone={connectionTone}>{connectionLabel}</StatusBadge>
-            <span className="inline-flex h-7 items-center rounded-full border border-border bg-surface-muted px-2.5 text-[0.66rem] font-medium text-muted-foreground">
-              {pulse.label}: {pulse.value}
-            </span>
-          </div>
-
-          <SmartActionButton
-            label="Quick Add"
-            icon={Plus}
-            variant="outline"
-            className="hidden sm:inline-flex"
-            onClick={() => navigate("/pipeline")}
-            items={[
-              {
-                label: "Open deal board",
-                description: "Jump straight to pipeline and create the next opportunity.",
-                onSelect: () => navigate("/pipeline"),
-              },
-              {
-                label: "Capture task",
-                description: "Create a task instantly from the header command bar.",
-                icon: CalendarClock,
-                onSelect: openQuickTaskDialog,
-              },
-              {
-                label: "Open contact intake",
-                description: "Add or enrich a contact from the contacts workspace.",
-                onSelect: () => navigate("/clients"),
-              },
-            ]}
-          />
-
-          <Button
-            variant="outline"
-            size="icon"
-            className="sm:hidden"
-            onClick={openQuickTaskDialog}
-            aria-label="Quick capture task"
-          >
-            <Plus className="size-4" />
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="icon"
-            className="relative"
-            onClick={() => navigate("/crm-agent")}
-            aria-label="Open CRM Agent"
-          >
-            <Bot className="size-4" />
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="icon"
-            className="relative"
-            onClick={toggleTheme}
-            aria-label={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-          >
-            {resolvedTheme === "dark" ? (
-              <SunMedium className="size-4" />
-            ) : (
-              <MoonStar className="size-4" />
-            )}
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="icon"
-            className="relative"
-            aria-label="Notifications"
-            onClick={() => navigate("/messages")}
-          >
-            <Bell className="size-4" />
-            {workspace.stats.messages > 0 ? (
-              <span className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-warning" />
-            ) : null}
-          </Button>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="group flex items-center gap-2.5 rounded-[calc(var(--radius)-3px)] border border-border bg-surface-muted px-2.5 py-1.5 transition-colors hover:border-primary hover:bg-accent">
-                <div className="flex size-8 items-center justify-center rounded-lg border border-primary bg-primary font-metric text-[0.82rem] font-semibold text-primary-foreground">
-                  {userInitial}
-                </div>
-                <div className="hidden min-w-0 text-left lg:block">
-                  <p className="truncate text-sm font-semibold text-foreground">
+                  <div className="hidden min-w-0 text-left lg:block">
+                    <p className="truncate text-sm font-semibold text-foreground">
+                      {user?.name ?? workspace.name}
+                    </p>
+                    <p className="truncate text-[0.66rem] text-muted-foreground">
+                      {userSubtitle} · {PRESENCE_STYLES[presence].label}
+                    </p>
+                  </div>
+                  <div className="hidden xl:flex items-center gap-1 rounded-full border border-border bg-background px-2 py-0.5 text-xs font-semibold text-muted-foreground">
+                    <span
+                      className={cn(
+                        "size-1.5 rounded-full",
+                        PRESENCE_STYLES[presence].dotClassName
+                      )}
+                    />
+                    {workspace.stats.tasks} tasks
+                  </div>
+                  <ChevronDown className="hidden size-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180 lg:block" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="w-72 rounded-[calc(var(--radius)-1px)] border-border bg-popover p-1.5 shadow-[var(--shadow-elevated)]"
+              >
+                <DropdownMenuLabel className="space-y-2 px-2.5 py-2">
+                  <p className="text-[0.82rem] font-semibold text-foreground">
                     {user?.name ?? workspace.name}
                   </p>
-                  <p className="truncate text-[0.66rem] text-muted-foreground">
-                    {userSubtitle} · {PRESENCE_STYLES[presence].label}
-                  </p>
-                </div>
-                <div className="hidden xl:flex items-center gap-1 rounded-full border border-border bg-background px-2 py-0.5 text-xs font-semibold text-muted-foreground">
-                  <span className={cn("size-1.5 rounded-full", PRESENCE_STYLES[presence].dotClassName)} />
-                  {workspace.stats.tasks} tasks
-                </div>
-                <ChevronDown className="hidden size-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180 lg:block" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="end"
-              className="w-72 rounded-[calc(var(--radius)-1px)] border-border bg-popover p-1.5 shadow-[var(--shadow-elevated)]"
-            >
-              <DropdownMenuLabel className="space-y-2 px-2.5 py-2">
-                <p className="text-[0.82rem] font-semibold text-foreground">
-                  {user?.name ?? workspace.name}
+                  <p className="text-[0.72rem] text-muted-foreground">{userMeta}</p>
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <div className="rounded-lg border border-border bg-surface-muted px-2 py-1.5">
+                      <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
+                        Open tasks
+                      </p>
+                      <p className="mt-1 text-[0.82rem] font-semibold text-foreground">
+                        {workspace.stats.tasks}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border border-border bg-surface-muted px-2 py-1.5">
+                      <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
+                        Inbox load
+                      </p>
+                      <p className="mt-1 text-[0.82rem] font-semibold text-foreground">
+                        {workspace.stats.messages}
+                      </p>
+                    </div>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate("/messages")}>
+                  <Bell className="size-4" />
+                  Inbox triage queue
+                  <DropdownMenuShortcut>G I</DropdownMenuShortcut>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/tasks")}>
+                  <Command className="size-4" />
+                  Personal execution queue
+                  <DropdownMenuShortcut>G T</DropdownMenuShortcut>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={openQuickTaskDialog}>
+                  <CalendarClock className="size-4" />
+                  Quick capture task
+                  <DropdownMenuShortcut>⌘⇧N</DropdownMenuShortcut>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/settings")}>
+                  <Settings2 className="size-4" />
+                  Open settings
+                  <DropdownMenuShortcut>G S</DropdownMenuShortcut>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="px-2.5 py-1 text-xs uppercase tracking-[0.14em] text-muted-foreground">
+                  Availability
+                </DropdownMenuLabel>
+                <DropdownMenuRadioGroup
+                  value={presence}
+                  onValueChange={(value) => setPresence(value as UserPresence)}
+                >
+                  <DropdownMenuRadioItem value="available" className="text-sm">
+                    {PRESENCE_STYLES.available.label}
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="focus" className="text-sm">
+                    {PRESENCE_STYLES.focus.label}
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="dnd" className="text-sm">
+                    {PRESENCE_STYLES.dnd.label}
+                  </DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+                <p className="px-2.5 py-1.5 text-xs text-muted-foreground">
+                  {PRESENCE_STYLES[presence].detail}
                 </p>
-                <p className="text-[0.72rem] text-muted-foreground">{userMeta}</p>
-                <div className="grid grid-cols-2 gap-2 pt-1">
-                  <div className="rounded-lg border border-border bg-surface-muted px-2 py-1.5">
-                    <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
-                      Open tasks
-                    </p>
-                    <p className="mt-1 text-[0.82rem] font-semibold text-foreground">
-                      {workspace.stats.tasks}
-                    </p>
-                  </div>
-                  <div className="rounded-lg border border-border bg-surface-muted px-2 py-1.5">
-                    <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
-                      Inbox load
-                    </p>
-                    <p className="mt-1 text-[0.82rem] font-semibold text-foreground">
-                      {workspace.stats.messages}
-                    </p>
-                  </div>
-                </div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => navigate("/messages")}>
-                <Bell className="size-4" />
-                Inbox triage queue
-                <DropdownMenuShortcut>G I</DropdownMenuShortcut>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate("/tasks")}>
-                <Command className="size-4" />
-                Personal execution queue
-                <DropdownMenuShortcut>G T</DropdownMenuShortcut>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={openQuickTaskDialog}>
-                <CalendarClock className="size-4" />
-                Quick capture task
-                <DropdownMenuShortcut>⌘⇧N</DropdownMenuShortcut>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate("/settings")}>
-                <Settings2 className="size-4" />
-                Open settings
-                <DropdownMenuShortcut>G S</DropdownMenuShortcut>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuLabel className="px-2.5 py-1 text-xs uppercase tracking-[0.14em] text-muted-foreground">
-                Availability
-              </DropdownMenuLabel>
-              <DropdownMenuRadioGroup
-                value={presence}
-                onValueChange={(value) => setPresence(value as UserPresence)}
-              >
-                <DropdownMenuRadioItem value="available" className="text-sm">
-                  {PRESENCE_STYLES.available.label}
-                </DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="focus" className="text-sm">
-                  {PRESENCE_STYLES.focus.label}
-                </DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="dnd" className="text-sm">
-                  {PRESENCE_STYLES.dnd.label}
-                </DropdownMenuRadioItem>
-              </DropdownMenuRadioGroup>
-              <p className="px-2.5 py-1.5 text-xs text-muted-foreground">
-                {PRESENCE_STYLES[presence].detail}
-              </p>
-              {user || isGuest ? (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    variant="destructive"
-                    onClick={() => {
-                      void handleSignOut();
-                    }}
-                  >
-                    <LogOut className="size-4" />
-                    {isGuest ? "Exit guest mode" : "Sign out"}
-                  </DropdownMenuItem>
-                </>
-              ) : null}
-            </DropdownMenuContent>
-          </DropdownMenu>
+                {user || isGuest ? (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      variant="destructive"
+                      onClick={() => {
+                        void handleSignOut();
+                      }}
+                    >
+                      <LogOut className="size-4" />
+                      {isGuest ? "Exit guest mode" : "Sign out"}
+                    </DropdownMenuItem>
+                  </>
+                ) : null}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
-      </div>
       </header>
 
       <Dialog
@@ -727,7 +536,8 @@ export function TopBar({
             <DialogHeader className="space-y-1 text-left">
               <DialogTitle className="text-base">Quick Task Capture</DialogTitle>
               <DialogDescription className="text-sm leading-5">
-                Save a task from anywhere in the CRM. Uses live API when available, local queue when offline.
+                Save a task from anywhere in the CRM. Uses live API when available, local queue when
+                offline.
               </DialogDescription>
             </DialogHeader>
           </div>
@@ -769,7 +579,11 @@ export function TopBar({
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <StatusBadge tone={connection === "live" || connection === "bootstrapped" ? "success" : "warning"}>
+              <StatusBadge
+                tone={
+                  connection === "live" || connection === "bootstrapped" ? "success" : "warning"
+                }
+              >
                 {connection === "live" || connection === "bootstrapped"
                   ? "Will write to live workspace"
                   : "Will save to local queue"}
@@ -779,11 +593,7 @@ export function TopBar({
           </div>
 
           <DialogFooter className="border-t border-border px-5 py-4 sm:justify-between">
-            <Button
-              variant="ghost"
-              onClick={closeQuickTaskDialog}
-              disabled={quickTaskSaving}
-            >
+            <Button variant="ghost" onClick={closeQuickTaskDialog} disabled={quickTaskSaving}>
               Cancel
             </Button>
             <Button

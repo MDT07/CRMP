@@ -1,26 +1,26 @@
-import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   ArrowUpRight,
   Building2,
   Globe2,
   Handshake,
+  Plus,
   ShieldCheck,
   UserRoundPlus,
 } from "lucide-react";
-
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
+import { buildPageAssistantSelection } from "../../lib/assistant-hooks";
 import {
-  fetchCompanies,
-  fetchContacts,
-  fetchDeals,
   type Company,
   type Contact,
   type Deal,
+  fetchCompanies,
+  fetchContacts,
+  fetchDeals,
 } from "../../lib/crm-api";
-import { buildPageAssistantSelection } from "../../lib/assistant-hooks";
 import { useCrmApp } from "../../providers/CrmProvider";
-import { MetricCard, PageHeader, StatusBadge, SurfaceCard } from "../crm-ui";
-import { Button } from "../ui/button";
+import { MetricCard, PageHeader, SmartActionButton, StatusBadge, SurfaceCard } from "../crm-ui";
 
 interface AccountHealth {
   id: string;
@@ -102,7 +102,7 @@ const previewAccounts: AccountHealth[] = [
 function buildAccountHealth(
   companies: Company[],
   contacts: Contact[],
-  deals: Deal[],
+  deals: Deal[]
 ): AccountHealth[] {
   if (!companies.length) {
     return previewAccounts;
@@ -139,18 +139,18 @@ function buildAccountHealth(
       const companyContacts = contactsByCompany.get(company.id) ?? [];
       const companyDeals = dealsByCompany.get(company.id) ?? [];
       const openDeals = companyDeals.filter(
-        (deal) => deal.pipeline_stage !== "closed_won" && deal.pipeline_stage !== "closed_lost",
+        (deal) => deal.pipeline_stage !== "closed_won" && deal.pipeline_stage !== "closed_lost"
       );
       const champions = companyContacts.filter(
-        (contact) => contact.status === "active" || contact.status === "customer",
+        (contact) => contact.status === "active" || contact.status === "customer"
       ).length;
       const expansionValue = openDeals.reduce((sum, deal) => sum + toAmount(deal.amount), 0);
       const health = Math.max(
         46,
         Math.min(
           98,
-          52 + champions * 8 + openDeals.length * 7 + Math.min(18, companyContacts.length),
-        ),
+          52 + champions * 8 + openDeals.length * 7 + Math.min(18, companyContacts.length)
+        )
       );
 
       return {
@@ -169,16 +169,11 @@ function buildAccountHealth(
 }
 
 export function AccountsPage() {
-  const {
-    clearAssistantSelection,
-    connection,
-    isGuest,
-    setAssistantSelection,
-    workspace,
-  } = useCrmApp();
+  const { clearAssistantSelection, connection, isGuest, setAssistantSelection, workspace } =
+    useCrmApp();
   const [accounts, setAccounts] = useState<AccountHealth[]>(previewAccounts);
   const [source, setSource] = useState<"loading" | "live" | "preview">(
-    connection === "loading" ? "loading" : "preview",
+    connection === "loading" ? "loading" : "preview"
   );
   const [error, setError] = useState<string | null>(null);
 
@@ -193,7 +188,7 @@ export function AccountsPage() {
       setError(
         connection === "fallback"
           ? "Showing preview account intelligence because backend sync is unavailable."
-          : "Guest mode keeps account intelligence in preview.",
+          : "Guest mode keeps account intelligence in preview."
       );
       setAccounts(previewAccounts);
       return;
@@ -242,7 +237,7 @@ export function AccountsPage() {
           entity_id: String(account.id),
         })),
         summary: "Account health and expansion context",
-      }),
+      })
     );
 
     return () => {
@@ -271,7 +266,7 @@ export function AccountsPage() {
         .filter((account) => account.health >= 70)
         .sort((left, right) => right.expansionValue - left.expansionValue)
         .slice(0, 5),
-    [accounts],
+    [accounts]
   );
 
   return (
@@ -282,20 +277,44 @@ export function AccountsPage() {
         meta={
           <>
             <StatusBadge tone={sourceTone}>{sourceLabel}</StatusBadge>
-            <StatusBadge tone="info">{workspace.stats.companies} companies in workspace</StatusBadge>
+            <StatusBadge tone="info">
+              {workspace.stats.companies} companies in workspace
+            </StatusBadge>
           </>
         }
         actions={
-          <>
-            <Button variant="outline">
-              <UserRoundPlus className="size-4" />
-              Add stakeholder
-            </Button>
-            <Button>
-              <Building2 className="size-4" />
-              New account plan
-            </Button>
-          </>
+          <SmartActionButton
+            label="Add Account"
+            icon={Plus}
+            variant="success"
+            onClick={() => {
+              toast.info("Add account", {
+                description: "Account creation form will open here.",
+              });
+            }}
+            items={[
+              {
+                label: "Add account",
+                description: "Create a new account with company profile and stakeholders.",
+                icon: Building2,
+                onSelect: () => {
+                  toast.info("Add account", {
+                    description: "Account creation form will open here.",
+                  });
+                },
+              },
+              {
+                label: "Add stakeholder",
+                description: "Add a contact to an existing account.",
+                icon: UserRoundPlus,
+                onSelect: () => {
+                  toast.info("Add stakeholder", {
+                    description: "Stakeholder addition form will open here.",
+                  });
+                },
+              },
+            ]}
+          />
         }
       />
 
@@ -348,12 +367,14 @@ export function AccountsPage() {
             {accounts.slice(0, 8).map((account) => (
               <div
                 key={account.id}
-                className="rounded-[calc(var(--radius)-1px)] border border-border/80 bg-card px-3 py-3"
+                className="rounded-[calc(var(--radius)-1px)] border border-border/80 bg-card px-3 py-3 transition-all duration-200 hover:border-primary/15 hover:shadow-md"
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className="truncate text-sm font-semibold text-foreground">{account.name}</p>
+                      <p className="truncate text-sm font-semibold text-foreground">
+                        {account.name}
+                      </p>
                       <StatusBadge tone={account.health >= 75 ? "success" : "warning"}>
                         Health {account.health}
                       </StatusBadge>
@@ -376,13 +397,17 @@ export function AccountsPage() {
                     <p className="text-[0.64rem] tracking-[0.16em] text-muted-foreground uppercase">
                       Champions
                     </p>
-                    <p className="mt-1 text-sm font-semibold text-foreground">{account.champions}</p>
+                    <p className="mt-1 text-sm font-semibold text-foreground">
+                      {account.champions}
+                    </p>
                   </div>
                   <div className="rounded-[calc(var(--radius)-5px)] border border-border/70 bg-muted px-2.5 py-2">
                     <p className="text-[0.64rem] tracking-[0.16em] text-muted-foreground uppercase">
                       Open deals
                     </p>
-                    <p className="mt-1 text-sm font-semibold text-foreground">{account.openDeals}</p>
+                    <p className="mt-1 text-sm font-semibold text-foreground">
+                      {account.openDeals}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -402,11 +427,13 @@ export function AccountsPage() {
               {highPotential.map((account) => (
                 <div
                   key={`potential-${account.id}`}
-                  className="rounded-[calc(var(--radius)-2px)] border border-border/80 bg-surface-strong/65 px-3 py-3"
+                  className="rounded-[calc(var(--radius)-2px)] border border-border/80 bg-surface-strong/65 px-3 py-3 transition-all duration-200 hover:border-primary/15 hover:shadow-sm"
                 >
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-sm font-semibold text-foreground">{account.name}</p>
-                    <StatusBadge tone="primary">{formatCurrency(account.expansionValue)}</StatusBadge>
+                    <StatusBadge tone="primary">
+                      {formatCurrency(account.expansionValue)}
+                    </StatusBadge>
                   </div>
                   <p className="mt-1 text-xs leading-5 text-muted-foreground">
                     {account.openDeals} open deals · {account.champions} champions mapped
@@ -424,16 +451,17 @@ export function AccountsPage() {
               </p>
             </div>
             <div className="space-y-2.5 p-3">
-              <div className="rounded-[calc(var(--radius)-2px)] border border-border/80 bg-card px-3 py-3">
+              <div className="rounded-[calc(var(--radius)-2px)] border border-border/80 bg-card px-3 py-3 transition-all duration-200 hover:border-primary/15 hover:shadow-sm">
                 <div className="flex items-center gap-2">
                   <ShieldCheck className="size-4 text-success" />
                   <p className="text-sm font-semibold text-foreground">Renewal safety net</p>
                 </div>
                 <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                  Trigger multi-threading when a renewal account has fewer than two active champions.
+                  Trigger multi-threading when a renewal account has fewer than two active
+                  champions.
                 </p>
               </div>
-              <div className="rounded-[calc(var(--radius)-2px)] border border-border/80 bg-card px-3 py-3">
+              <div className="rounded-[calc(var(--radius)-2px)] border border-border/80 bg-card px-3 py-3 transition-all duration-200 hover:border-primary/15 hover:shadow-sm">
                 <div className="flex items-center gap-2">
                   <Globe2 className="size-4 text-info" />
                   <p className="text-sm font-semibold text-foreground">Account map refresh</p>

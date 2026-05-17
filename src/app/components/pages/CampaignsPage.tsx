@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
 import { BarChart3, Megaphone, Send, Sparkles, Target, TimerReset } from "lucide-react";
-
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { buildPageAssistantSelection } from "../../lib/assistant-hooks";
-import { fetchDeals, fetchMessages, type Deal, type Message } from "../../lib/crm-api";
+import { type Deal, fetchDeals, fetchMessages, type Message } from "../../lib/crm-api";
 import { useCrmApp } from "../../providers/CrmProvider";
 import { MetricCard, PageHeader, StatusBadge, SurfaceCard } from "../crm-ui";
 import { Button } from "../ui/button";
@@ -22,7 +22,7 @@ const previewCampaigns: CampaignRow[] = [
     id: "cmp-1",
     name: "Q2 Expansion Pulse",
     audience: "Existing accounts",
-    channel: "Email + Inbox AI",
+    channel: "Email + Inbox AgentP",
     status: "Active",
     responses: 84,
     influencedPipeline: 124000,
@@ -72,7 +72,7 @@ function buildCampaigns(messages: Message[], deals: Deal[]): CampaignRow[] {
   const chatCount = messages.filter((message) => message.channel === "chat").length;
   const apiCount = messages.filter((message) => message.channel === "api").length;
   const openPipeline = deals.filter(
-    (deal) => deal.pipeline_stage !== "closed_won" && deal.pipeline_stage !== "closed_lost",
+    (deal) => deal.pipeline_stage !== "closed_won" && deal.pipeline_stage !== "closed_lost"
   );
   const openPipelineValue = openPipeline.reduce((sum, deal) => sum + toAmount(deal.amount), 0);
 
@@ -81,7 +81,7 @@ function buildCampaigns(messages: Message[], deals: Deal[]): CampaignRow[] {
       id: "campaign-live-1",
       name: "Expansion activation",
       audience: "Active accounts",
-      channel: "Email + AI drafts",
+      channel: "Email + AgentP drafts",
       status: "Active",
       responses: Math.max(18, Math.round(inbound.length * 0.34)),
       influencedPipeline: Math.round(openPipelineValue * 0.27),
@@ -108,17 +108,12 @@ function buildCampaigns(messages: Message[], deals: Deal[]): CampaignRow[] {
 }
 
 export function CampaignsPage() {
-  const {
-    clearAssistantSelection,
-    connection,
-    isGuest,
-    setAssistantSelection,
-    workspace,
-  } = useCrmApp();
+  const { clearAssistantSelection, connection, isGuest, setAssistantSelection, workspace } =
+    useCrmApp();
   const [campaigns, setCampaigns] = useState<CampaignRow[]>(previewCampaigns);
   const [messages, setMessages] = useState<Message[]>([]);
   const [source, setSource] = useState<"loading" | "live" | "preview">(
-    connection === "loading" ? "loading" : "preview",
+    connection === "loading" ? "loading" : "preview"
   );
   const [error, setError] = useState<string | null>(null);
 
@@ -133,7 +128,7 @@ export function CampaignsPage() {
       setError(
         connection === "fallback"
           ? "Campaign performance is running in preview because backend sync is unavailable."
-          : "Guest mode keeps campaign metrics in preview.",
+          : "Guest mode keeps campaign metrics in preview."
       );
       setCampaigns(previewCampaigns);
       setMessages([]);
@@ -181,7 +176,7 @@ export function CampaignsPage() {
           entity_id: message.id,
         })),
         summary: "Campaign performance and channel context",
-      }),
+      })
     );
 
     return () => {
@@ -192,7 +187,7 @@ export function CampaignsPage() {
   const totalResponses = campaigns.reduce((sum, campaign) => sum + campaign.responses, 0);
   const influencedPipeline = campaigns.reduce(
     (sum, campaign) => sum + campaign.influencedPipeline,
-    0,
+    0
   );
   const activeCampaignCount = campaigns.filter((campaign) => campaign.status === "Active").length;
   const responseRate = messages.length > 0 ? totalResponses / messages.length : 0.28;
@@ -241,11 +236,24 @@ export function CampaignsPage() {
         }
         actions={
           <>
-            <Button variant="outline">
+            <Button
+              variant="outline"
+              onClick={() => {
+                toast.info("Clone sequence", {
+                  description: "Campaign sequence duplication will open here.",
+                });
+              }}
+            >
               <TimerReset className="size-4" />
               Clone sequence
             </Button>
-            <Button>
+            <Button
+              onClick={() => {
+                toast.info("New campaign", {
+                  description: "Campaign creation form will open here.",
+                });
+              }}
+            >
               <Megaphone className="size-4" />
               New campaign
             </Button>
@@ -302,7 +310,7 @@ export function CampaignsPage() {
             {campaigns.map((campaign) => (
               <div
                 key={campaign.id}
-                className="rounded-[calc(var(--radius)-1px)] border border-border/80 bg-card px-3 py-3"
+                className="rounded-[calc(var(--radius)-1px)] border border-border/80 bg-card px-3 py-3 transition-all duration-200 hover:border-primary/15 hover:shadow-md"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-sm font-semibold text-foreground">{campaign.name}</p>
@@ -326,7 +334,9 @@ export function CampaignsPage() {
                     <p className="text-[0.64rem] tracking-[0.16em] text-muted-foreground uppercase">
                       Responses
                     </p>
-                    <p className="mt-1 text-sm font-semibold text-foreground">{campaign.responses}</p>
+                    <p className="mt-1 text-sm font-semibold text-foreground">
+                      {campaign.responses}
+                    </p>
                   </div>
                   <div className="rounded-[calc(var(--radius)-5px)] border border-border/70 bg-muted px-2.5 py-2">
                     <p className="text-[0.64rem] tracking-[0.16em] text-muted-foreground uppercase">
@@ -364,13 +374,14 @@ export function CampaignsPage() {
                 </div>
               </div>
             ))}
-            <div className="rounded-[calc(var(--radius)-2px)] border border-border/80 bg-card px-3 py-3">
+            <div className="rounded-[calc(var(--radius)-2px)] border border-border/80 bg-card px-3 py-3 transition-all duration-200 hover:border-primary/15 hover:shadow-sm">
               <div className="flex items-center gap-2">
                 <BarChart3 className="size-4 text-info" />
                 <p className="text-sm font-semibold text-foreground">Optimization suggestion</p>
               </div>
               <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                Shift 15% more outreach to the top-performing channel and keep reply drafting in the AI rail for speed.
+                Shift 15% more outreach to the top-performing channel and keep reply drafting in the
+                AgentP rail for speed.
               </p>
             </div>
           </div>

@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   Calendar,
   Clock,
@@ -11,7 +10,8 @@ import {
   Trash2,
   Zap,
 } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 // Types
@@ -23,7 +23,12 @@ interface WorkflowNode {
 }
 
 interface TriggerNodeData {
-  triggerType: "deal_stage_change" | "task_created" | "email_received" | "no_activity" | "scheduled";
+  triggerType:
+    | "deal_stage_change"
+    | "task_created"
+    | "email_received"
+    | "no_activity"
+    | "scheduled";
   config: Record<string, unknown>;
 }
 
@@ -59,7 +64,8 @@ const mockWorkflows: AutomationWorkflow[] = [
   {
     id: "1",
     name: "New Lead Welcome Sequence",
-    description: "Automatically send welcome email and create follow-up task when new lead is created",
+    description:
+      "Automatically send welcome email and create follow-up task when new lead is created",
     status: "active",
     triggerCount: 156,
     lastTriggered: "2 hours ago",
@@ -94,7 +100,8 @@ const mockWorkflows: AutomationWorkflow[] = [
   {
     id: "2",
     name: "High-Value Deal Alert",
-    description: "Notify sales manager when deal value exceeds $50,000 and probability is above 70%",
+    description:
+      "Notify sales manager when deal value exceeds $50,000 and probability is above 70%",
     status: "active",
     triggerCount: 23,
     lastTriggered: "1 day ago",
@@ -176,6 +183,7 @@ function WorkflowCard({
 
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
+            type="button"
             onClick={() => onDuplicate(workflow.id)}
             className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
             title="Duplicate"
@@ -183,6 +191,7 @@ function WorkflowCard({
             <Copy className="size-4" />
           </button>
           <button
+            type="button"
             onClick={() => onEdit(workflow.id)}
             className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
             title="Edit"
@@ -190,6 +199,7 @@ function WorkflowCard({
             <Settings className="size-4" />
           </button>
           <button
+            type="button"
             onClick={() => onDelete(workflow.id)}
             className="rounded-lg p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
             title="Delete"
@@ -220,6 +230,7 @@ function WorkflowCard({
       <div className="mt-4 flex items-center justify-between border-t border-border/50 pt-4">
         <span className="text-xs text-muted-foreground">Created {workflow.createdAt}</span>
         <button
+          type="button"
           onClick={() => onToggle(workflow.id)}
           className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
             workflow.status === "active" ? "bg-success" : "bg-muted"
@@ -329,9 +340,12 @@ export function AutomationBuilder() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Workflow Automation</h1>
-          <p className="text-sm text-muted-foreground">Build automated workflows to streamline your sales process</p>
+          <p className="text-sm text-muted-foreground">
+            Build automated workflows to streamline your sales process
+          </p>
         </div>
         <button
+          type="button"
           onClick={() => setIsCreating(true)}
           className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
         >
@@ -356,7 +370,12 @@ export function AutomationBuilder() {
           { label: "Active", value: stats.active, icon: Play, color: "text-success" },
           { label: "Paused", value: stats.paused, icon: RefreshCw, color: "text-warning" },
           { label: "Drafts", value: stats.draft, icon: Calendar, color: "text-muted-foreground" },
-          { label: "Total Triggers", value: stats.totalTriggers, icon: Sparkles, color: "text-info" },
+          {
+            label: "Total Triggers",
+            value: stats.totalTriggers,
+            icon: Sparkles,
+            color: "text-info",
+          },
         ].map((stat) => (
           <div
             key={stat.label}
@@ -364,7 +383,9 @@ export function AutomationBuilder() {
           >
             <div className="flex items-center gap-2">
               <stat.icon className={`size-4 ${stat.color}`} />
-              <span className="text-xs font-medium text-muted-foreground uppercase">{stat.label}</span>
+              <span className="text-xs font-medium text-muted-foreground uppercase">
+                {stat.label}
+              </span>
             </div>
             <p className="mt-2 text-2xl font-bold text-foreground">{stat.value}</p>
           </div>
@@ -375,6 +396,7 @@ export function AutomationBuilder() {
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 max-w-sm">
           <input
+            id="workflow-name"
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -382,6 +404,7 @@ export function AutomationBuilder() {
             className="w-full rounded-lg border border-border/80 bg-card px-3 py-2 pl-9 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
           <svg
+            aria-hidden="true"
             className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
             fill="none"
             viewBox="0 0 24 24"
@@ -399,6 +422,7 @@ export function AutomationBuilder() {
         <div className="flex items-center gap-2">
           {(["all", "active", "paused", "draft"] as const).map((status) => (
             <button
+              type="button"
               key={status}
               onClick={() => setStatusFilter(status)}
               className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
@@ -449,17 +473,21 @@ export function AutomationBuilder() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-[calc(var(--radius)+4px)] border border-border/80 bg-card p-6 shadow-xl">
             <h2 className="text-lg font-semibold text-foreground">Create New Workflow</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Give your workflow a name to get started</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Give your workflow a name to get started
+            </p>
 
             <div className="mt-4">
-              <label className="text-sm font-medium text-foreground">Workflow Name</label>
+              <label htmlFor="workflow-name" className="text-sm font-medium text-foreground">
+                Workflow Name
+              </label>
               <input
+                id="workflow-name"
                 type="text"
                 value={newWorkflowName}
                 onChange={(e) => setNewWorkflowName(e.target.value)}
                 placeholder="e.g., New Lead Follow-up"
                 className="mt-1 w-full rounded-lg border border-border/80 bg-card px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
-                autoFocus
                 onKeyDown={(e) => {
                   if (e.key === "Enter") handleCreateWorkflow();
                 }}
@@ -468,6 +496,7 @@ export function AutomationBuilder() {
 
             <div className="mt-6 flex justify-end gap-2">
               <button
+                type="button"
                 onClick={() => {
                   setIsCreating(false);
                   setNewWorkflowName("");
@@ -477,6 +506,7 @@ export function AutomationBuilder() {
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={handleCreateWorkflow}
                 disabled={!newWorkflowName.trim()}
                 className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"

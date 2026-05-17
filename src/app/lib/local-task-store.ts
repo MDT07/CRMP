@@ -14,12 +14,7 @@ export interface LocalQuickTask {
 }
 
 function isTaskStatus(value: unknown): value is TaskStatus {
-  return (
-    value === "open"
-    || value === "in_progress"
-    || value === "done"
-    || value === "cancelled"
-  );
+  return value === "open" || value === "in_progress" || value === "done" || value === "cancelled";
 }
 
 function toLocalQuickTask(value: unknown): LocalQuickTask | null {
@@ -29,12 +24,12 @@ function toLocalQuickTask(value: unknown): LocalQuickTask | null {
 
   const task = value as Partial<LocalQuickTask>;
   if (
-    typeof task.id !== "string"
-    || typeof task.title !== "string"
-    || typeof task.client !== "string"
-    || typeof task.assignee !== "string"
-    || typeof task.created_at !== "string"
-    || !isTaskStatus(task.status)
+    typeof task.id !== "string" ||
+    typeof task.title !== "string" ||
+    typeof task.client !== "string" ||
+    typeof task.assignee !== "string" ||
+    typeof task.created_at !== "string" ||
+    !isTaskStatus(task.status)
   ) {
     return null;
   }
@@ -44,10 +39,7 @@ function toLocalQuickTask(value: unknown): LocalQuickTask | null {
     title: task.title,
     client: task.client,
     assignee: task.assignee,
-    due_at:
-      typeof task.due_at === "string" || task.due_at === null
-        ? task.due_at
-        : null,
+    due_at: typeof task.due_at === "string" || task.due_at === null ? task.due_at : null,
     status: task.status,
     created_at: task.created_at,
   };
@@ -69,9 +61,7 @@ function readStore() {
       return [];
     }
 
-    return parsed
-      .map(toLocalQuickTask)
-      .filter((task): task is LocalQuickTask => Boolean(task));
+    return parsed.map(toLocalQuickTask).filter((task): task is LocalQuickTask => Boolean(task));
   } catch {
     return [];
   }
@@ -88,8 +78,7 @@ function persistStore(tasks: LocalQuickTask[]) {
 
 export function listLocalQuickTasks() {
   return readStore().sort(
-    (left, right) =>
-      new Date(right.created_at).getTime() - new Date(left.created_at).getTime(),
+    (left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime()
   );
 }
 
@@ -115,15 +104,13 @@ export function createLocalQuickTask(input: {
 }
 
 export function updateLocalQuickTaskStatus(taskId: string, status: TaskStatus) {
-  const tasks = readStore().map((task) =>
-    task.id === taskId ? { ...task, status } : task,
-  );
+  const tasks = readStore().map((task) => (task.id === taskId ? { ...task, status } : task));
   persistStore(tasks);
 }
 
 export function updateLocalQuickTask(
   taskId: string,
-  patch: Partial<Pick<LocalQuickTask, "title" | "client" | "assignee" | "due_at" | "status">>,
+  patch: Partial<Pick<LocalQuickTask, "title" | "client" | "assignee" | "due_at" | "status">>
 ) {
   const tasks = readStore().map((task) => {
     if (task.id !== taskId) {
@@ -132,22 +119,10 @@ export function updateLocalQuickTask(
 
     return {
       ...task,
-      title:
-        typeof patch.title === "string"
-          ? patch.title.trim() || task.title
-          : task.title,
-      client:
-        typeof patch.client === "string"
-          ? patch.client.trim() || "Internal"
-          : task.client,
-      assignee:
-        typeof patch.assignee === "string"
-          ? patch.assignee.trim() || "You"
-          : task.assignee,
-      due_at:
-        patch.due_at === undefined
-          ? task.due_at
-          : patch.due_at,
+      title: typeof patch.title === "string" ? patch.title.trim() || task.title : task.title,
+      client: typeof patch.client === "string" ? patch.client.trim() || "Internal" : task.client,
+      assignee: typeof patch.assignee === "string" ? patch.assignee.trim() || "You" : task.assignee,
+      due_at: patch.due_at === undefined ? task.due_at : patch.due_at,
       status: patch.status ?? task.status,
     };
   });

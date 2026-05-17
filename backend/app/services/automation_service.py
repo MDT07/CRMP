@@ -112,7 +112,7 @@ class AutomationService:
                     run.detail = str(exc)[:500]
 
                 self.session.add(run)
-                await self.session.flush()
+                await self.session.commit()
 
                 await EventDispatcher(self.session).publish(
                     organization_id=event.organization_id,

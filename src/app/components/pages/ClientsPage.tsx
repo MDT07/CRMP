@@ -1,4 +1,3 @@
-import { useEffect, useMemo, useState } from "react";
 import {
   Bot,
   Building2,
@@ -12,24 +11,19 @@ import {
   Users,
 } from "lucide-react";
 import { motion } from "motion/react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-
+import { buildPageAssistantSelection } from "../../lib/assistant-hooks";
 import {
+  type Company,
   createCompany,
   createContact,
   fetchCompanies,
   fetchContacts,
   fetchDeals,
-  type Company,
 } from "../../lib/crm-api";
-import { buildPageAssistantSelection } from "../../lib/assistant-hooks";
-import {
-  formatCurrencyValue,
-  getInitials,
-  titleCase,
-  toAmountNumber,
-} from "../../lib/crm-format";
-import { fallbackClients, clientDrafts } from "../../lib/fallback-data";
+import { formatCurrencyValue, getInitials, titleCase, toAmountNumber } from "../../lib/crm-format";
+import { clientDrafts, fallbackClients } from "../../lib/fallback-data";
 import { useCrmApp } from "../../providers/CrmProvider";
 import {
   PageHeader,
@@ -96,7 +90,7 @@ function parseClientValue(value: string) {
 function buildClientRows(
   contacts: Awaited<ReturnType<typeof fetchContacts>>,
   companies: Awaited<ReturnType<typeof fetchCompanies>>,
-  deals: Awaited<ReturnType<typeof fetchDeals>>,
+  deals: Awaited<ReturnType<typeof fetchDeals>>
 ) {
   const companyMap = new Map(companies.map((company) => [company.id, company]));
   const dealTotals = new Map<string, number>();
@@ -104,7 +98,7 @@ function buildClientRows(
   for (const deal of deals) {
     dealTotals.set(
       deal.contact_id,
-      (dealTotals.get(deal.contact_id) ?? 0) + toAmountNumber(deal.amount),
+      (dealTotals.get(deal.contact_id) ?? 0) + toAmountNumber(deal.amount)
     );
   }
 
@@ -135,12 +129,7 @@ function buildClientRows(
 }
 
 export function ClientsPage() {
-  const {
-    clearAssistantSelection,
-    connection,
-    isGuest,
-    setAssistantSelection,
-  } = useCrmApp();
+  const { clearAssistantSelection, connection, isGuest, setAssistantSelection } = useCrmApp();
   const guestPreviewMessage =
     "Guest mode is showing demo contact data so you can explore the CRM without registration.";
   const [clients, setClients] = useState(fallbackClients);
@@ -148,7 +137,7 @@ export function ClientsPage() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"All" | ClientStatusLabel>("All");
   const [dataSource, setDataSource] = useState<"loading" | "live" | "preview">(
-    connection === "loading" ? "loading" : "preview",
+    connection === "loading" ? "loading" : "preview"
   );
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(
@@ -156,7 +145,7 @@ export function ClientsPage() {
       ? "Backend connection is unavailable, so the clients workspace is showing preview data."
       : isGuest
         ? guestPreviewMessage
-        : null,
+        : null
   );
   const sourceTone =
     dataSource === "live" ? "success" : dataSource === "loading" || isGuest ? "info" : "warning";
@@ -184,6 +173,7 @@ export function ClientsPage() {
     setError(null);
   };
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: load function defined below
   useEffect(() => {
     if (connection === "loading") {
       setDataSource("loading");
@@ -195,7 +185,7 @@ export function ClientsPage() {
       setError(
         connection === "fallback"
           ? "Backend connection is unavailable, so the clients workspace is showing preview data."
-          : guestPreviewMessage,
+          : guestPreviewMessage
       );
       return;
     }
@@ -205,7 +195,7 @@ export function ClientsPage() {
     const sync = async () => {
       try {
         await loadClients();
-      } catch (loadError) {
+      } catch (_loadError) {
         if (cancelled) {
           return;
         }
@@ -214,7 +204,7 @@ export function ClientsPage() {
         setError(
           isGuest
             ? guestPreviewMessage
-            : "Using preview client data because the live contact records could not be loaded.",
+            : "Using preview client data because the live contact records could not be loaded."
         );
       }
     };
@@ -224,7 +214,7 @@ export function ClientsPage() {
     return () => {
       cancelled = true;
     };
-  }, [connection]);
+  }, [connection, isGuest]);
 
   useEffect(() => {
     setAssistantSelection(
@@ -237,7 +227,7 @@ export function ClientsPage() {
           entity_id: String(client.id),
         })),
         summary: "Client and account relationship context",
-      }),
+      })
     );
 
     return () => {
@@ -250,7 +240,7 @@ export function ClientsPage() {
       (filter === "All" || client.status === filter) &&
       (client.name.toLowerCase().includes(search.toLowerCase()) ||
         client.company.toLowerCase().includes(search.toLowerCase()) ||
-        client.tag.toLowerCase().includes(search.toLowerCase())),
+        client.tag.toLowerCase().includes(search.toLowerCase()))
   );
 
   const activeCount = clients.filter((client) => client.status === "Active").length;
@@ -258,7 +248,7 @@ export function ClientsPage() {
   const customerCount = clients.filter((client) => client.status === "Customer").length;
   const totalRelationshipValue = clients.reduce(
     (sum, client) => sum + parseClientValue(client.value),
-    0,
+    0
   );
   const segmentLeaders = useMemo(() => {
     const bucket = new Map<string, number>();
@@ -267,9 +257,7 @@ export function ClientsPage() {
       bucket.set(client.tag, (bucket.get(client.tag) ?? 0) + 1);
     }
 
-    return [...bucket.entries()]
-      .sort((left, right) => right[1] - left[1])
-      .slice(0, 4);
+    return [...bucket.entries()].sort((left, right) => right[1] - left[1]).slice(0, 4);
   }, [clients]);
   const focusClient = filtered[0] ?? clients[0] ?? null;
 
@@ -281,7 +269,7 @@ export function ClientsPage() {
 
       try {
         const existingCompany = companies.find(
-          (company) => company.name.toLowerCase() === template.company.toLowerCase(),
+          (company) => company.name.toLowerCase() === template.company.toLowerCase()
         );
         const company =
           existingCompany ??
@@ -351,7 +339,7 @@ export function ClientsPage() {
   };
 
   const handleEnrichClient = () => {
-    toast.success("AI enrichment queued", {
+    toast.success("AgentP enrichment queued", {
       description:
         "The next contact can be enriched with segment, likely role, and qualification hints.",
     });
@@ -424,12 +412,14 @@ export function ClientsPage() {
               },
               {
                 label: "Auto-fill from domain",
-                description: "Create a contact from one email or domain and let CRMP infer the company profile.",
+                description:
+                  "Create a contact from one email or domain and let CRMP infer the company profile.",
                 onSelect: handleAutofillClient,
               },
               {
-                label: "Enrich with AI",
-                description: "Suggest lead score, segment, and next-best action before the contact is saved.",
+                label: "Enrich with AgentP",
+                description:
+                  "Suggest lead score, segment, and next-best action before the contact is saved.",
                 icon: Bot,
                 onSelect: handleEnrichClient,
               },
@@ -504,13 +494,14 @@ export function ClientsPage() {
         <ToolbarGroup>
           {(["All", "Active", "Lead", "Customer", "Inactive"] as const).map((value) => (
             <button
+              type="button"
               key={value}
               onClick={() => setFilter(value)}
               className={cn(
                 "rounded-full border px-3 py-1 text-[0.72rem] font-semibold transition-colors",
                 filter === value
                   ? "border-primary/20 bg-primary/12 text-primary"
-                  : "border-border/80 bg-card/70 text-muted-foreground hover:border-primary/12 hover:text-foreground",
+                  : "border-border/80 bg-card/70 text-muted-foreground hover:border-primary/12 hover:text-foreground"
               )}
             >
               {value}
@@ -627,7 +618,7 @@ export function ClientsPage() {
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.02 }}
-                className="rounded-[calc(var(--radius)+1px)] border border-border/80 bg-surface-strong/70 p-3"
+                className="rounded-[calc(var(--radius)+1px)] border border-border/80 bg-surface-strong/70 p-3 transition-all duration-200 hover:border-primary/15 hover:shadow-md"
               >
                 <div className="flex items-start gap-3">
                   <div className="flex size-10 items-center justify-center rounded-[0.95rem] border border-primary/14 bg-primary/10 font-metric text-sm font-semibold text-primary">
@@ -705,7 +696,9 @@ export function ClientsPage() {
             {focusClient ? (
               <>
                 <div className="flex flex-wrap gap-2">
-                  <StatusBadge tone={statusTone[focusClient.status]}>{focusClient.status}</StatusBadge>
+                  <StatusBadge tone={statusTone[focusClient.status]}>
+                    {focusClient.status}
+                  </StatusBadge>
                   <StatusBadge tone={tagTone[focusClient.tag] ?? "neutral"}>
                     {titleCase(focusClient.tag)}
                   </StatusBadge>
@@ -767,7 +760,7 @@ export function ClientsPage() {
               {segmentLeaders.map(([tag, count]) => (
                 <div
                   key={tag}
-                  className="flex items-center justify-between rounded-[calc(var(--radius)-2px)] border border-border/80 bg-surface-strong/70 px-3 py-2.5"
+                  className="flex items-center justify-between rounded-[calc(var(--radius)-2px)] border border-border/80 bg-surface-strong/70 px-3 py-2.5 transition-all duration-200 hover:border-primary/15 hover:shadow-sm"
                 >
                   <div className="flex items-center gap-2">
                     <div className="flex size-8 items-center justify-center rounded-[0.85rem] border border-border/80 bg-background text-muted-foreground">
@@ -785,11 +778,13 @@ export function ClientsPage() {
             <div>
               <p className="text-sm font-semibold text-foreground">Smart profile actions</p>
               <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                Keep enrichment and data cleanup close to the contact list instead of hiding them in menus.
+                Keep enrichment and data cleanup close to the contact list instead of hiding them in
+                menus.
               </p>
             </div>
 
             <button
+              type="button"
               onClick={handleAutofillClient}
               className="flex items-start gap-3 rounded-[calc(var(--radius)-2px)] border border-border/80 bg-surface-strong/70 p-3 text-left transition-colors hover:border-primary/18 hover:bg-surface-strong"
             >
@@ -805,6 +800,7 @@ export function ClientsPage() {
             </button>
 
             <button
+              type="button"
               onClick={handleEnrichClient}
               className="flex items-start gap-3 rounded-[calc(var(--radius)-2px)] border border-border/80 bg-surface-strong/70 p-3 text-left transition-colors hover:border-primary/18 hover:bg-surface-strong"
             >
@@ -812,7 +808,7 @@ export function ClientsPage() {
                 <Sparkles className="size-4" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-foreground">AI enrichment</p>
+                <p className="text-sm font-semibold text-foreground">AgentP enrichment</p>
                 <p className="mt-1 text-xs leading-5 text-muted-foreground">
                   Suggest tags, lead score, and next-best action before outreach starts.
                 </p>

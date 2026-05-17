@@ -1,31 +1,50 @@
-import '@testing-library/jest-dom';
-import { cleanup } from '@testing-library/react';
-import { afterEach, vi } from 'vitest';
+import "@testing-library/jest-dom/vitest";
+import { cleanup } from "@testing-library/react";
+import { afterEach, vi } from "vitest";
 
 // Cleanup after each test
 afterEach(() => {
   cleanup();
 });
 
-// Mock matchMedia
-global.matchMedia = global.matchMedia || function() {
-  return {
+// Mock window.matchMedia
+Object.defineProperty(window, "matchMedia", {
+  writable: true,
+  value: vi.fn().mockImplementation((query: string) => ({
     matches: false,
+    media: query,
+    onchange: null,
     addListener: vi.fn(),
     removeListener: vi.fn(),
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
     dispatchEvent: vi.fn(),
-  };
-};
+  })),
+});
+
+// Mock ResizeObserver
+class ResizeObserverMock {
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
+}
+
+window.ResizeObserver = ResizeObserverMock as unknown as typeof ResizeObserver;
 
 // Mock IntersectionObserver
-global.IntersectionObserver = vi.fn().mockImplementation(() => ({
-  disconnect: vi.fn(),
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  takeRecords: vi.fn(() => []),
-  root: null,
-  rootMargin: '0px',
-  thresholds: [0],
-}));
+class IntersectionObserverMock implements IntersectionObserver {
+  root: Element | Document | null = null;
+  rootMargin: string = "";
+  scrollMargin: string = "";
+  thresholds: ReadonlyArray<number> = [];
+
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
+  takeRecords = vi.fn().mockReturnValue([]);
+}
+
+window.IntersectionObserver = IntersectionObserverMock as unknown as typeof IntersectionObserver;
+
+// Mock scrollTo
+window.scrollTo = vi.fn();

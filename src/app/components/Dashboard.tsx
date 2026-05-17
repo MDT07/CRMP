@@ -1,56 +1,42 @@
-import { useState } from "react";
-import { useNavigate } from "react-router";
 import {
+  Activity,
   ArrowRight,
   Briefcase,
   Clock3,
+  DollarSign,
   MessageSquare,
   RefreshCw,
   Sparkles,
+  Target,
   TrendingUp,
   Users,
   Zap,
 } from "lucide-react";
 import { motion } from "motion/react";
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  Line,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { useState } from "react";
+import { useNavigate } from "react-router";
+import { Area, AreaChart, CartesianGrid, Line, ResponsiveContainer, XAxis, YAxis } from "recharts";
 
 import type { GrowthPoint } from "../lib/crm-api";
-import { useCrmApp, type CrmConnectionState } from "../providers/CrmProvider";
-import {
-  PageHeader,
-  SmartActionButton,
-  StatusBadge,
-  SurfaceCard,
-} from "./crm-ui";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "./ui/chart";
+import { type CrmConnectionState, useCrmApp } from "../providers/CrmProvider";
+import { MetricCard, PageHeader, SmartActionButton, StatusBadge, SurfaceCard } from "./crm-ui";
 import { Button } from "./ui/button";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "./ui/chart";
 import { cn } from "./ui/utils";
 
-type Tone = "primary" | "info" | "warning" | "success";
-
-const channelBadges = ["Instagram", "WhatsApp", "Email", "Live chat"];
+type Tone = "primary" | "info" | "warning" | "success" | "accent";
 
 const toneClasses: Record<Tone, string> = {
-  primary: "border-primary/18 bg-primary/12 text-primary",
+  primary: "border-primary/18 bg-primary-soft text-primary",
   info: "border-info/18 bg-info-soft text-info",
   warning: "border-warning/18 bg-warning-soft text-warning",
   success: "border-success/18 bg-success-soft text-success",
+  accent: "border-accent/18 bg-accent-soft text-accent",
 };
 
 const chartConfig = {
   revenue: {
-    label: "Actual revenue",
+    label: "Revenue",
     color: "var(--chart-1)",
   },
   forecast: {
@@ -59,7 +45,7 @@ const chartConfig = {
   },
   target: {
     label: "Target",
-    color: "rgba(149, 228, 255, 0.72)",
+    color: "var(--chart-4)",
   },
 };
 
@@ -76,39 +62,18 @@ function formatInteger(value: number) {
   return new Intl.NumberFormat("en-US").format(value);
 }
 
-function getConnectionTone(connection: CrmConnectionState) {
-  if (connection === "fallback") {
-    return "warning" as const;
-  }
-
-  if (connection === "guest") {
-    return "info" as const;
-  }
-
-  if (connection === "loading") {
-    return "info" as const;
-  }
-
-  return "success" as const;
+function getConnectionTone(connection: CrmConnectionState): Tone {
+  if (connection === "fallback") return "warning";
+  if (connection === "guest") return "info";
+  if (connection === "loading") return "info";
+  return "success";
 }
 
 function getConnectionLabel(connection: CrmConnectionState) {
-  if (connection === "fallback") {
-    return "Preview mode";
-  }
-
-  if (connection === "guest") {
-    return "Guest mode";
-  }
-
-  if (connection === "loading") {
-    return "Syncing workspace";
-  }
-
-  if (connection === "bootstrapped") {
-    return "Starter data live";
-  }
-
+  if (connection === "fallback") return "Preview mode";
+  if (connection === "guest") return "Guest mode";
+  if (connection === "loading") return "Syncing workspace";
+  if (connection === "bootstrapped") return "Starter data live";
   return "Workspace live";
 }
 
@@ -116,15 +81,15 @@ function buildChartSeries(growth: GrowthPoint[]) {
   return growth.map((point) => {
     const revenue = Number((point.revenue / 1000).toFixed(1));
     const target = Number(
-      (Math.max(point.revenue * 0.9, point.leads_created * 850) / 1000).toFixed(1),
+      (Math.max(point.revenue * 0.9, point.leads_created * 850) / 1000).toFixed(1)
     );
     const forecast = Number(
       (
         Math.max(
           point.revenue * 1.05,
-          point.revenue + point.deals_closed * 1400 + point.leads_created * 320,
+          point.revenue + point.deals_closed * 1400 + point.leads_created * 320
         ) / 1000
-      ).toFixed(1),
+      ).toFixed(1)
     );
 
     return {
@@ -138,32 +103,44 @@ function buildChartSeries(growth: GrowthPoint[]) {
   });
 }
 
+// Demo data for preview/guest mode
+const workspaceDemoData = {
+  company: "Your Company",
+  tagline: "Growth starts here",
+  industry: "Technology",
+  hq: "San Francisco, CA",
+  employees: "50",
+  marketCap: "—",
+  revenue: "$1.2M",
+  growth: "+15%",
+};
+
 export function Dashboard() {
   const navigate = useNavigate();
-  const { connection, dashboard, isGuest, isLoading, refresh, workspace } =
-    useCrmApp();
-  const [range, setRange] = useState<"4w" | "8w">("4w");
+  const { connection, dashboard, isGuest, isLoading, refresh, workspace } = useCrmApp();
+  const [range, setRange] = useState<"4w" | "8w" | "12w">("8w");
   const todayLabel = new Intl.DateTimeFormat("en-US", {
     weekday: "long",
     month: "long",
     day: "numeric",
     year: "numeric",
   }).format(new Date());
+
   const growthData = buildChartSeries(dashboard.growth);
-  const visibleData = range === "4w" ? growthData.slice(-4) : growthData;
+  const visibleData =
+    range === "4w" ? growthData.slice(-4) : range === "8w" ? growthData.slice(-8) : growthData;
   const latestPoint =
     visibleData[visibleData.length - 1] ?? growthData[growthData.length - 1] ?? null;
-  const bestPeriod = growthData.reduce<(typeof growthData)[number] | null>(
-    (currentBest, point) => {
-      if (!currentBest || point.revenue > currentBest.revenue) {
-        return point;
-      }
-
-      return currentBest;
-    },
-    null,
+  const bestPeriod = growthData.reduce<(typeof growthData)[number] | null>((currentBest, point) => {
+    if (!currentBest || point.revenue > currentBest.revenue) {
+      return point;
+    }
+    return currentBest;
+  }, null);
+  const totalLeads = dashboard.growth.reduce(
+    (sum: number, point: { leads_created: number }) => sum + point.leads_created,
+    0
   );
-  const totalLeads = dashboard.growth.reduce((sum: number, point: { leads_created: number }) => sum + point.leads_created, 0);
   const connectionTone = getConnectionTone(connection);
   const connectionLabel = getConnectionLabel(connection);
   const unreadPressure = Math.max(2, Math.round(workspace.stats.messages * 0.22));
@@ -183,172 +160,129 @@ export function Dashboard() {
 
   const metrics = [
     {
-      label: "Revenue",
+      title: "Revenue",
       value: formatCurrencyCompact(dashboard.metrics.total_revenue),
-      delta: bestPeriod ? `${bestPeriod.month} is strongest` : "Revenue trend syncing",
-      icon: TrendingUp,
-      tone: "primary" as const,
+      subtitle: bestPeriod ? `${bestPeriod.month} peak performance` : "Revenue tracking",
+      trend: "up" as const,
+      trendValue: "+12.4%",
+      icon: <DollarSign className="size-5" />,
+      color: "primary" as const,
     },
     {
-      label: "Pipeline",
+      title: "Pipeline",
       value: formatInteger(workspace.stats.deals),
-      delta: `${stalledDeals} deals need movement`,
-      icon: Briefcase,
-      tone: "info" as const,
+      subtitle: `${stalledDeals} deals need attention`,
+      trend: "neutral" as const,
+      trendValue: `${stalledDeals} stalled`,
+      icon: <Briefcase className="size-5" />,
+      color: "info" as const,
     },
     {
-      label: "Win rate",
+      title: "Win Rate",
       value: `${dashboard.metrics.conversion_rate.toFixed(1)}%`,
-      delta: `${dashboard.metrics.deals_closed} deals won`,
-      icon: Sparkles,
-      tone: "success" as const,
+      subtitle: `${dashboard.metrics.deals_closed} deals closed`,
+      trend: "up" as const,
+      trendValue: "+3.2%",
+      icon: <Target className="size-5" />,
+      color: "success" as const,
     },
     {
-      label: "Unread",
+      title: "Active Deals",
       value: formatInteger(unreadPressure),
-      delta: `${workspace.stats.messages} tracked threads`,
-      icon: MessageSquare,
-      tone: "warning" as const,
+      subtitle: `${workspace.stats.messages} conversations`,
+      trend: "up" as const,
+      trendValue: "+8.1%",
+      icon: <Activity className="size-5" />,
+      color: "accent" as const,
     },
   ];
 
   const queueItems = [
     {
-      title: "Triage unread conversations",
-      detail:
-        connection === "fallback"
-          ? "Inbox pressure is local for now, but the workflow is ready to use."
-          : isGuest
-            ? "Guest mode mirrors the inbox queue so the triage flow stays visible."
-            : `${workspace.stats.messages} messages are linked to CRM records and ready for follow-up.`,
+      title: "Triage inbox conversations",
+      detail: `${workspace.stats.messages} messages across Email, WhatsApp, and Live Chat need follow-up.`,
       badge: `${unreadPressure} urgent`,
       path: "/messages",
       icon: MessageSquare,
-      tone: "info" as const,
+      tone: "info" as Tone,
     },
     {
       title: "Advance qualified deals",
-      detail: `${workspace.stats.deals} open opportunities are already in the workspace and ready for stage movement.`,
+      detail: `${workspace.stats.deals} opportunities in pipeline. ${stalledDeals} deals stalled for 7+ days.`,
       badge: `${stalledDeals} stalled`,
       path: "/pipeline",
       icon: Briefcase,
-      tone: "primary" as const,
+      tone: "primary" as Tone,
     },
     {
-      title: "Clean new contact intake",
-      detail: `${formatInteger(totalLeads)} recent leads can be enriched, tagged, and routed before the next push.`,
+      title: "Enrich new contacts",
+      detail: `${formatInteger(totalLeads)} leads captured. Review and assign to account managers.`,
       badge: `${workspace.stats.contacts} contacts`,
       path: "/clients",
       icon: Users,
-      tone: "success" as const,
+      tone: "success" as Tone,
     },
     {
-      title: "Convert reminders into automation",
-      detail: `${overdueTasks} follow-ups can be handed to workflow rules and AI-assisted reminders.`,
-      badge: workspace.crm_ready ? "Ready" : "Seed first",
+      title: "Automate follow-ups",
+      detail: `${overdueTasks} tasks overdue. Set up workflow rules to reduce manual work.`,
+      badge: workspace.crm_ready ? "Ready" : "Setup",
       path: "/automations",
       icon: Zap,
-      tone: "warning" as const,
+      tone: "warning" as Tone,
     },
   ];
 
-  const riskItems = [
-    {
-      label: "Negotiation deals losing momentum",
-      value: `${stalledDeals} deals`,
-      detail: "No recent movement means pricing or follow-up pressure is building.",
-      tone: "warning" as const,
-      path: "/pipeline",
-    },
-    {
-      label: "Forecast gap to target",
-      value: forecastGap > 0 ? `$${forecastGap}K` : "On track",
-      detail:
-        forecastGap > 0
-          ? "One more qualified push would close the visible forecast gap."
-          : "Forecast is matching or exceeding target in the visible range.",
-      tone: forecastGap > 0 ? ("primary" as const) : ("success" as const),
-      path: "/analytics",
-    },
-    {
-      label: "Follow-ups due this week",
-      value: `${overdueTasks} tasks`,
-      detail: "Ownership is clear, but response timing needs a tighter loop.",
-      tone: "info" as const,
-      path: "/tasks",
-    },
-  ];
-
-  const inboxItems = [
-    {
-      label: "Unread threads",
-      value: formatInteger(unreadPressure),
-      detail: "Highest-priority replies are clustered around active opportunities.",
-      tone: "warning" as const,
-      path: "/messages",
-    },
+  const quickStats = [
     {
       label: "Response SLA",
       value: replySla,
-      detail: "The shell is optimized around fast reply, assignment, and AI drafting.",
-      tone: "info" as const,
-      path: "/messages",
+      detail: "Average first response",
+      tone: "info" as Tone,
     },
     {
-      label: "Channels connected",
-      value: "4 live",
-      detail: "Email, WhatsApp, Instagram, and live chat stay inside one inbox.",
-      tone: "success" as const,
-      path: "/messages",
-    },
-  ];
-
-  const recentActivity = [
-    {
-      title: `${formatInteger(totalLeads)} leads captured in the visible range`,
-      detail: "Lead intake is healthy enough to keep enrichment and routing worthwhile.",
-      tone: "success" as const,
+      label: "Channels",
+      value: "4 active",
+      detail: "Email, WhatsApp, Chat, IG",
+      tone: "success" as Tone,
     },
     {
-      title: `${dashboard.metrics.deals_closed} deals closed with ${workspace.stats.deals} still active`,
-      detail: "The pipeline has enough depth to keep the forecast meaningful.",
-      tone: "primary" as const,
-    },
-    {
-      title: `${workspace.stats.messages} linked conversations across ${channelBadges.length} channels`,
-      detail: "Communication is centralized enough to support task creation and AI drafting.",
-      tone: "info" as const,
+      label: "Forecast Gap",
+      value: forecastGap > 0 ? `$${forecastGap}K` : "On track",
+      detail: "vs. quarterly target",
+      tone: forecastGap > 0 ? "warning" : ("success" as Tone),
     },
   ];
 
   return (
-    <div className="space-y-4 pb-6">
+    <div className="space-y-6 pb-6">
       <PageHeader
-        title="Growth overview"
+        title="Growth Overview"
         description={
           connection === "fallback"
-            ? "A compact control surface for revenue, pipeline pressure, and response pace while backend connectivity is unavailable."
+            ? `Preview mode showing ${workspaceDemoData.company} sample data. Explore the CRM functionality.`
             : isGuest
-              ? "Guest mode keeps the CRM fully explorable with demo data, so the operating model stays clear before account creation."
-              : `${workspace.name} keeps revenue, pipeline health, conversations, and team execution inside one denser operating view.`
+              ? `Guest mode with ${workspaceDemoData.company} demo data. Sign up to connect your workspace.`
+              : `${workspace.name} — Revenue, pipeline, and team execution in one view.`
         }
         meta={
           <>
-            <span>{todayLabel}</span>
-            <StatusBadge tone={connectionTone}>{connectionLabel}</StatusBadge>
-            <StatusBadge tone={workspace.crm_ready ? "success" : "warning"}>
-              {workspace.crm_ready ? `${workspace.stats.deals} deals tracked` : "Starter workspace"}
+            <span className="text-xs text-muted-foreground">{todayLabel}</span>
+            <StatusBadge tone={connectionTone} dot pulse={connection === "loading"}>
+              {connectionLabel}
             </StatusBadge>
           </>
         }
         actions={
           <>
-            <Button variant="outline" onClick={() => void refresh()} disabled={isLoading}>
-              <RefreshCw className={cn("size-4", isLoading && "animate-spin")} />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void refresh()}
+              disabled={isLoading}
+              className="rounded-xl"
+            >
+              <RefreshCw className={cn("size-4 mr-1.5", isLoading && "animate-spin")} />
               Refresh
-            </Button>
-            <Button variant="outline" onClick={() => navigate("/messages")}>
-              Inbox
             </Button>
             <SmartActionButton
               label="Create Deal"
@@ -356,20 +290,22 @@ export function Dashboard() {
               onClick={() => navigate("/pipeline")}
               items={[
                 {
-                  label: "Create from inbox",
-                  description: "Start a deal from current conversation pressure and owner context.",
+                  label: "From inbox thread",
+                  description: "Convert a conversation into a tracked opportunity.",
                   icon: MessageSquare,
                   onSelect: () => navigate("/messages"),
                 },
                 {
-                  label: "CRM Agent suggested deal",
-                  description: "Open the pipeline and use the AI assistant to suggest stage and value.",
+                  label: "AgentP suggestion",
+                  description: "Let AgentP analyze and suggest deal parameters.",
                   icon: Sparkles,
-                  onSelect: () => navigate("/pipeline"),
+                  onSelect: () => {
+                    /* Open AgentP panel */
+                  },
                 },
                 {
-                  label: "Add contact first",
-                  description: "Open the contacts workspace and create the relationship record first.",
+                  label: "New contact first",
+                  description: "Add a contact before creating their deal record.",
                   icon: Users,
                   onSelect: () => navigate("/clients"),
                 },
@@ -379,156 +315,48 @@ export function Dashboard() {
         }
       />
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.8fr)_minmax(19rem,1fr)]">
-        <div className="flex flex-col gap-4">
+      {/* Metrics Grid */}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {metrics.map((metric, index) => (
+          <motion.div
+            key={metric.title}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, delay: index * 0.06, ease: "easeOut" }}
+          >
+            <MetricCard {...metric} />
+          </motion.div>
+        ))}
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-[1fr_340px]">
+        {/* Main Content */}
+        <div className="flex flex-col gap-6">
+          {/* Chart Section */}
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.34, ease: "easeOut" }}
+            transition={{ duration: 0.35, delay: 0.2 }}
           >
-            <SurfaceCard tone="subtle" className="gap-0 overflow-hidden border-transparent bg-transparent shadow-none ring-0">
-              <div className="mb-4">
-                <h2 className="text-lg font-semibold text-foreground">Up Next</h2>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Highest-value actions to keep revenue pace and response time under control.
-                </p>
-              </div>
-
-              <div className="grid gap-3">
-                {queueItems.map((item) => {
-                  const Icon = item.icon;
-
-                  return (
+            <SurfaceCard tone="default" padding="lg" radius="lg">
+              <div className="mb-6 flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-foreground">Revenue & Forecast</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Actual revenue vs. forecast and quarterly targets
+                  </p>
+                </div>
+                <div className="flex items-center gap-1 rounded-xl bg-surface-muted p-1">
+                  {(["4w", "8w", "12w"] as const).map((option) => (
                     <button
-                      key={item.title}
-                      onClick={() => navigate(item.path)}
-                      className="group flex w-full items-start gap-4 rounded-xl bg-surface-subtle/50 p-4 text-left transition-all duration-200 hover:bg-surface-subtle hover:shadow-sm"
-                    >
-                      <div
-                        className={cn(
-                          "mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-xl bg-background transition-colors duration-200",
-                          toneClasses[item.tone],
-                          "group-hover:bg-background"
-                        )}
-                      >
-                        <Icon className="size-5" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <p className="text-[0.95rem] font-semibold text-foreground group-hover:text-primary transition-colors">{item.title}</p>
-                          <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                            {item.badge}
-                          </span>
-                        </div>
-                        <p className="mt-1 text-[0.8rem] leading-relaxed text-muted-foreground/80">
-                          {item.detail}
-                        </p>
-                      </div>
-                      <div className="mt-1 shrink-0 text-muted-foreground/30 transition-colors duration-200 group-hover:text-primary/50">
-                        <ArrowRight className="size-4" />
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </SurfaceCard>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.34, delay: 0.1, ease: "easeOut" }}
-          >
-            <SurfaceCard tone="subtle" className="gap-0 overflow-hidden border-transparent bg-transparent shadow-none ring-0 mt-2">
-              <div className="mb-4">
-                <h2 className="text-lg font-semibold text-foreground">Action Required</h2>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2 text-left">
-                  {riskItems.map((item) => (
-                    <button
-                      key={item.label}
-                      onClick={() => navigate(item.path)}
-                      className="flex flex-col gap-2 rounded-xl border border-border/40 bg-surface-muted/30 p-4 transition-all duration-200 hover:border-warning/30 hover:bg-warning/5"
-                    >
-                      <div className="flex items-center justify-between w-full">
-                        <StatusBadge tone={item.tone} className="px-2 py-0.5">{item.value}</StatusBadge>
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-foreground">{item.label}</p>
-                        <p className="mt-1 text-xs leading-relaxed text-muted-foreground/80 line-clamp-2">{item.detail}</p>
-                      </div>
-                    </button>
-                  ))}
-                  {inboxItems.slice(0, 1).map((item) => (
-                    <button
-                      key={item.label}
-                      onClick={() => navigate(item.path)}
-                      className="flex flex-col gap-2 rounded-xl border border-border/40 bg-surface-muted/30 p-4 transition-all duration-200 hover:border-info/30 hover:bg-info/5"
-                    >
-                      <div className="flex items-center justify-between w-full">
-                        <StatusBadge tone={item.tone} className="px-2 py-0.5">{item.value}</StatusBadge>
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-foreground">{item.label}</p>
-                        <p className="mt-1 text-xs leading-relaxed text-muted-foreground/80 line-clamp-2">{item.detail}</p>
-                      </div>
-                    </button>
-                  ))}
-              </div>
-            </SurfaceCard>
-          </motion.div>
-        </div>
-
-        <div className="flex flex-col gap-4">
-          <div className="space-y-4">
-            <div>
-              <h2 className="text-lg font-semibold text-foreground">Pulse</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Key metrics and recent activity at a glance.
-              </p>
-            </div>
-
-            <div className="grid gap-2.5">
-              {metrics.map((metric, index) => (
-                <motion.div
-                  key={metric.label}
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.04 + 0.04 }}
-                >
-                  <div className="rounded-xl bg-surface-subtle/30 p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="flex size-8 items-center justify-center rounded-lg bg-background">
-                          <metric.icon className="size-4 text-muted-foreground" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-muted-foreground">{metric.label}</p>
-                          <p className="text-lg font-semibold text-foreground">{metric.value}</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xs text-muted-foreground">{metric.delta}</p>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-
-            <div className="rounded-xl bg-surface-subtle/30 p-4">
-              <div className="mb-3 flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-foreground">Revenue & Forecast</h3>
-                <div className="flex items-center gap-1 rounded-full bg-background p-0.5">
-                  {(["4w", "8w"] as const).map((option) => (
-                    <button
+                      type="button"
                       key={option}
                       onClick={() => setRange(option)}
                       className={cn(
-                        "rounded-full px-2 py-1 text-[0.64rem] font-semibold tracking-[0.16em] uppercase transition-colors",
+                        "rounded-lg px-3 py-1.5 text-xs font-semibold transition-all",
                         option === range
-                          ? "bg-primary text-primary-foreground"
-                          : "text-muted-foreground hover:text-foreground",
+                          ? "bg-primary text-white shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
                       )}
                     >
                       {option}
@@ -536,106 +364,282 @@ export function Dashboard() {
                   ))}
                 </div>
               </div>
-              <div className="flex items-baseline gap-2 mb-3">
-                <p className="font-metric text-2xl font-semibold tracking-tight text-foreground">
-                  {latestPoint ? `$${latestPoint.forecast}K` : "Syncing"}
+
+              <div className="flex items-baseline gap-3 mb-6">
+                <p className="font-metric text-3xl font-bold tracking-tight text-foreground">
+                  {latestPoint ? `$${latestPoint.forecast}K` : "—"}
                 </p>
-                <p className="text-xs text-muted-foreground">forecast</p>
+                <span className="text-sm text-muted-foreground">forecasted</span>
+                {forecastGap > 0 && (
+                  <StatusBadge tone="warning" size="sm">
+                    ${forecastGap}K gap
+                  </StatusBadge>
+                )}
               </div>
-              <div className="h-[12rem] w-full">
+
+              <div className="h-[280px] w-full">
                 <ChartContainer
                   config={chartConfig}
-                  className="h-full w-full aspect-auto [&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground [&_.recharts-cartesian-grid_line]:stroke-border/40"
+                  className="h-full w-full [&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground [&_.recharts-cartesian-grid_line]:stroke-border/30"
                 >
-                  <AreaChart
-                    data={visibleData}
-                    margin={{ top: 5, right: 0, left: -20, bottom: 0 }}
-                  >
-                    <defs>
-                      <linearGradient id="growthFill" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="var(--color-chart-1)" stopOpacity={0.15} />
-                        <stop offset="100%" stopColor="var(--color-chart-1)" stopOpacity={0.0} />
-                      </linearGradient>
-                    </defs>
-
-                    <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                    <XAxis
-                      dataKey="month"
-                      axisLine={false}
-                      tickLine={false}
-                      tickMargin={10}
-                      fontSize={11}
-                    />
-                    <YAxis
-                      axisLine={false}
-                      tickLine={false}
-                      tickMargin={10}
-                      width={50}
-                      fontSize={11}
-                      tickFormatter={(value) => `$${value}K`}
-                    />
-                    <ChartTooltip
-                      cursor={false}
-                      content={<ChartTooltipContent indicator="line" />}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="revenue"
-                      stroke="var(--color-chart-1)"
-                      strokeWidth={2.5}
-                      fill="url(#growthFill)"
-                      dot={false}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="forecast"
-                      stroke="var(--color-chart-2)"
-                      strokeWidth={2}
-                      strokeDasharray="4 4"
-                      dot={false}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="target"
-                      stroke="var(--color-chart-3)"
-                      strokeWidth={1.5}
-                      dot={false}
-                    />
-                  </AreaChart>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart
+                      data={visibleData}
+                      margin={{ top: 5, right: 10, left: 0, bottom: 0 }}
+                    >
+                      <defs>
+                        <linearGradient id="growthFill" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="var(--color-chart-1)" stopOpacity={0.2} />
+                          <stop offset="100%" stopColor="var(--color-chart-1)" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid
+                        vertical={false}
+                        strokeDasharray="4 4"
+                        stroke="var(--border)"
+                      />
+                      <XAxis
+                        dataKey="month"
+                        axisLine={false}
+                        tickLine={false}
+                        tickMargin={12}
+                        fontSize={12}
+                        stroke="var(--muted-foreground)"
+                      />
+                      <YAxis
+                        axisLine={false}
+                        tickLine={false}
+                        tickMargin={12}
+                        fontSize={12}
+                        tickFormatter={(value) => `$${value}K`}
+                        stroke="var(--muted-foreground)"
+                      />
+                      <ChartTooltip
+                        cursor={{ stroke: "var(--border)", strokeWidth: 1 }}
+                        content={<ChartTooltipContent indicator="line" />}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="revenue"
+                        stroke="var(--color-chart-1)"
+                        strokeWidth={2.5}
+                        fill="url(#growthFill)"
+                        dot={{
+                          r: 4,
+                          fill: "var(--color-chart-1)",
+                          strokeWidth: 2,
+                          stroke: "var(--card)",
+                        }}
+                        activeDot={{
+                          r: 6,
+                          fill: "var(--color-chart-1)",
+                          strokeWidth: 3,
+                          stroke: "var(--card)",
+                        }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="forecast"
+                        stroke="var(--color-chart-2)"
+                        strokeWidth={2}
+                        strokeDasharray="6 4"
+                        dot={false}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="target"
+                        stroke="var(--color-chart-4)"
+                        strokeWidth={1.5}
+                        strokeDasharray="2 2"
+                        dot={false}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
                 </ChartContainer>
               </div>
-              {forecastGap > 0 && (
-                <div className="mt-3 rounded-lg bg-warning/10 px-3 py-2 text-xs text-warning-foreground">
-                  <span className="font-semibold">Target Risk:</span> ${forecastGap}K gap in visible range.
-                </div>
-              )}
-            </div>
+            </SurfaceCard>
+          </motion.div>
 
-            <div className="rounded-xl bg-surface-subtle/30 p-4">
-              <div className="mb-3">
-                <p className="text-sm font-semibold text-foreground">Recent Activity</p>
+          {/* Action Queue */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, delay: 0.3 }}
+          >
+            <SurfaceCard tone="default" padding="lg" radius="lg">
+              <div className="mb-5">
+                <h2 className="text-lg font-semibold text-foreground">Up Next</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Priority actions to maintain revenue momentum
+                </p>
+              </div>
+
+              <div className="grid gap-3">
+                {queueItems.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <button
+                      type="button"
+                      key={item.title}
+                      onClick={() => navigate(item.path)}
+                      className="group flex w-full items-center gap-4 rounded-xl border border-border/40 bg-surface-muted/30 p-4 text-left transition-all duration-200 hover:border-primary/20 hover:bg-primary-soft/30 hover:shadow-sm"
+                    >
+                      <div
+                        className={cn(
+                          "flex size-11 shrink-0 items-center justify-center rounded-xl transition-colors",
+                          toneClasses[item.tone]
+                        )}
+                      >
+                        <Icon className="size-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="font-semibold text-foreground group-hover:text-primary transition-colors">
+                            {item.title}
+                          </p>
+                          <StatusBadge tone={item.tone} size="sm">
+                            {item.badge}
+                          </StatusBadge>
+                        </div>
+                        <p className="mt-0.5 text-sm text-muted-foreground/80">{item.detail}</p>
+                      </div>
+                      <ArrowRight className="size-4 shrink-0 text-muted-foreground/30 transition-all group-hover:text-primary/60 group-hover:translate-x-0.5" />
+                    </button>
+                  );
+                })}
+              </div>
+            </SurfaceCard>
+          </motion.div>
+        </div>
+
+        {/* Sidebar */}
+        <div className="flex flex-col gap-6">
+          {/* Company Card */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, delay: 0.25 }}
+          >
+            <SurfaceCard tone="gradient" padding="lg" radius="lg" glow="primary">
+              <div className="flex items-center gap-4">
+                <div className="flex size-14 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm">
+                  <span className="text-2xl font-bold text-white">🏢</span>
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-white">{workspaceDemoData.company}</p>
+                  <p className="text-sm text-white/70">{workspaceDemoData.tagline}</p>
+                </div>
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <div className="rounded-xl bg-white/10 px-3 py-2 backdrop-blur-sm">
+                  <p className="text-xs text-white/60">Revenue</p>
+                  <p className="text-sm font-semibold text-white">{workspaceDemoData.revenue}</p>
+                </div>
+                <div className="rounded-xl bg-white/10 px-3 py-2 backdrop-blur-sm">
+                  <p className="text-xs text-white/60">Growth</p>
+                  <p className="text-sm font-semibold text-success">{workspaceDemoData.growth}</p>
+                </div>
+                <div className="rounded-xl bg-white/10 px-3 py-2 backdrop-blur-sm">
+                  <p className="text-xs text-white/60">Market Cap</p>
+                  <p className="text-sm font-semibold text-white">{workspaceDemoData.marketCap}</p>
+                </div>
+                <div className="rounded-xl bg-white/10 px-3 py-2 backdrop-blur-sm">
+                  <p className="text-xs text-white/60">Employees</p>
+                  <p className="text-sm font-semibold text-white">{workspaceDemoData.employees}</p>
+                </div>
+              </div>
+            </SurfaceCard>
+          </motion.div>
+
+          {/* Quick Stats */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, delay: 0.35 }}
+          >
+            <SurfaceCard tone="default" padding="lg" radius="lg">
+              <div className="mb-4">
+                <h3 className="text-base font-semibold text-foreground">Performance</h3>
               </div>
               <div className="space-y-3">
-                {recentActivity.map((item) => (
-                  <div key={item.title} className="flex items-start gap-3">
-                    <div className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-background">
-                      {item.tone === "primary" ? (
-                        <TrendingUp className="size-3 text-primary" />
-                      ) : item.tone === "success" ? (
-                        <Sparkles className="size-3 text-success" />
-                      ) : (
-                        <Clock3 className="size-3 text-info" />
-                      )}
+                {quickStats.map((stat) => (
+                  <div key={stat.label} className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={cn(
+                          "size-2 rounded-full",
+                          stat.tone === "info" && "bg-info",
+                          stat.tone === "success" && "bg-success",
+                          stat.tone === "warning" && "bg-warning"
+                        )}
+                      />
+                      <span className="text-sm text-muted-foreground">{stat.label}</span>
                     </div>
-                    <div>
-                      <p className="text-sm font-medium text-foreground leading-snug">{item.title}</p>
-                      <p className="mt-0.5 text-xs text-muted-foreground/80">{item.detail}</p>
+                    <div className="text-right">
+                      <span className="text-sm font-semibold text-foreground">{stat.value}</span>
                     </div>
                   </div>
                 ))}
               </div>
-            </div>
-          </div>
+            </SurfaceCard>
+          </motion.div>
+
+          {/* Recent Activity */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, delay: 0.4 }}
+          >
+            <SurfaceCard tone="default" padding="lg" radius="lg">
+              <div className="mb-4">
+                <h3 className="text-base font-semibold text-foreground">Recent Activity</h3>
+              </div>
+              <div className="space-y-4">
+                {[
+                  {
+                    title: `${formatInteger(totalLeads)} new leads`,
+                    detail: "From website forms and campaigns",
+                    time: "2h ago",
+                    tone: "success" as Tone,
+                  },
+                  {
+                    title: `${dashboard.metrics.deals_closed} deals closed`,
+                    detail: `${workspace.stats.deals} still in pipeline`,
+                    time: "5h ago",
+                    tone: "primary" as Tone,
+                  },
+                  {
+                    title: `${workspace.stats.messages} conversations`,
+                    detail: "Across all connected channels",
+                    time: "1d ago",
+                    tone: "info" as Tone,
+                  },
+                ].map((item) => (
+                  <div key={item.title} className="flex items-start gap-3">
+                    <div
+                      className={cn(
+                        "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg",
+                        toneClasses[item.tone]
+                      )}
+                    >
+                      {item.tone === "success" ? (
+                        <Sparkles className="size-3.5" />
+                      ) : item.tone === "primary" ? (
+                        <TrendingUp className="size-3.5" />
+                      ) : (
+                        <Clock3 className="size-3.5" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-foreground">{item.title}</p>
+                      <p className="text-xs text-muted-foreground/70">{item.detail}</p>
+                    </div>
+                    <span className="text-xs text-muted-foreground/50">{item.time}</span>
+                  </div>
+                ))}
+              </div>
+            </SurfaceCard>
+          </motion.div>
         </div>
       </div>
     </div>

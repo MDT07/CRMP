@@ -1,7 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import { ChevronDown } from "lucide-react";
 
-import { Button, buttonVariants } from "../ui/button";
+import { Button, type buttonVariants } from "../ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,

@@ -1,4 +1,3 @@
-import { useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
   Bell,
@@ -13,17 +12,17 @@ import {
   Zap,
 } from "lucide-react";
 import { motion } from "motion/react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-
+import { buildPageAssistantSelection } from "../../lib/assistant-hooks";
 import {
-  createAutomationRule,
-  fetchAutomationRules,
-  fetchAutomationRuleRuns,
-  updateAutomationRule,
   type AutomationRule,
   type AutomationRuleRun,
+  createAutomationRule,
+  fetchAutomationRuleRuns,
+  fetchAutomationRules,
+  updateAutomationRule,
 } from "../../lib/crm-api";
-import { buildPageAssistantSelection } from "../../lib/assistant-hooks";
 import { useCrmApp } from "../../providers/CrmProvider";
 import { PageHeader, StatusBadge, SurfaceCard } from "../crm-ui";
 import { Button } from "../ui/button";
@@ -140,7 +139,7 @@ async function buildAutomationViews(rules: AutomationRule[]): Promise<Automation
       } catch {
         return [rule.id, [] as AutomationRuleRun[]] as const;
       }
-    }),
+    })
   );
   const runsMap = new Map(runsByRule);
 
@@ -160,15 +159,10 @@ async function buildAutomationViews(rules: AutomationRule[]): Promise<Automation
 }
 
 export function AutomationsPage() {
-  const {
-    clearAssistantSelection,
-    connection,
-    isGuest,
-    setAssistantSelection,
-  } = useCrmApp();
+  const { clearAssistantSelection, connection, isGuest, setAssistantSelection } = useCrmApp();
   const [automations, setAutomations] = useState<AutomationView[]>(fallbackAutomations);
   const [source, setSource] = useState<"loading" | "live" | "preview">(
-    connection === "loading" ? "loading" : "preview",
+    connection === "loading" ? "loading" : "preview"
   );
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -186,7 +180,7 @@ export function AutomationsPage() {
 
   const activeCount = useMemo(
     () => automations.filter((automation) => automation.active).length,
-    [automations],
+    [automations]
   );
 
   const loadAutomations = async () => {
@@ -197,6 +191,7 @@ export function AutomationsPage() {
     setError(null);
   };
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: load function defined below
   useEffect(() => {
     if (connection === "loading") {
       setSource("loading");
@@ -208,7 +203,7 @@ export function AutomationsPage() {
       setError(
         connection === "fallback"
           ? "Backend connection is unavailable. Showing preview automations."
-          : "Guest mode keeps automations in preview.",
+          : "Guest mode keeps automations in preview."
       );
       return;
     }
@@ -244,7 +239,7 @@ export function AutomationsPage() {
           entity_id: automation.id,
         })),
         summary: "Automation rules and runs context",
-      }),
+      })
     );
 
     return () => {
@@ -261,8 +256,8 @@ export function AutomationsPage() {
     if (source !== "live") {
       setAutomations((previous) =>
         previous.map((automation) =>
-          automation.id === id ? { ...automation, active: !automation.active } : automation,
-        ),
+          automation.id === id ? { ...automation, active: !automation.active } : automation
+        )
       );
       toast(activeRule.active ? "Automation paused" : "Automation resumed", {
         description: `${activeRule.name} is now ${activeRule.active ? "paused" : "active"}.`,
@@ -339,8 +334,8 @@ export function AutomationsPage() {
                   ? automation.actions.filter((action) => action !== "Refresh deal score")
                   : [...automation.actions, "Refresh deal score"],
               }
-            : automation,
-        ),
+            : automation
+        )
       );
       toast.info("Preview automation updated", {
         description: "Action mix was adjusted in preview mode.",
@@ -353,7 +348,7 @@ export function AutomationsPage() {
       return;
     }
     const hasRefreshScore = (rule.actions ?? []).some(
-      (action) => String(action.type ?? "") === "refresh_deal_score",
+      (action) => String(action.type ?? "") === "refresh_deal_score"
     );
     const nextActions = hasRefreshScore
       ? rule.actions.filter((action) => String(action.type ?? "") !== "refresh_deal_score")
@@ -412,7 +407,10 @@ export function AutomationsPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.04 }}
             >
-              <SurfaceCard tone={isActive ? "accent" : "subtle"} className={`gap-0 ${isActive ? "" : "opacity-85"}`}>
+              <SurfaceCard
+                tone={isActive ? "accent" : "subtle"}
+                className={`gap-0 ${isActive ? "" : "opacity-85"}`}
+              >
                 <div className="flex items-start justify-between gap-4 border-b border-border/70 px-5 py-5">
                   <div className="flex items-start gap-3">
                     <div className="flex size-11 items-center justify-center rounded-2xl border border-primary/18 bg-primary/12 text-primary">

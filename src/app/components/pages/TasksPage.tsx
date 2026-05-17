@@ -1,43 +1,42 @@
-import { useEffect, useState } from "react";
 import {
   AlertCircle,
   Bot,
   Calendar,
   Check,
-  CloudUpload,
   Clock,
+  CloudUpload,
   Flag,
   Loader2,
+  type LucideIcon,
   MoreHorizontal,
   Pencil,
   Play,
-  RotateCcw,
-  type LucideIcon,
   Plus,
+  RotateCcw,
 } from "lucide-react";
 import { motion } from "motion/react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-
+import { buildPageAssistantSelection } from "../../lib/assistant-hooks";
 import {
   createTask,
   fetchContacts,
   fetchDeals,
   fetchTasks,
-  updateTask,
   type TaskStatus,
+  updateTask,
 } from "../../lib/crm-api";
-import { buildPageAssistantSelection } from "../../lib/assistant-hooks";
 import { formatDueLabel } from "../../lib/crm-format";
 import {
   createLocalQuickTask,
   isLocalQuickTaskId,
+  type LocalQuickTask,
   listLocalQuickTasks,
   removeLocalQuickTask,
   removeLocalQuickTasks,
   subscribeToLocalQuickTasks,
   updateLocalQuickTask,
   updateLocalQuickTaskStatus,
-  type LocalQuickTask,
 } from "../../lib/local-task-store";
 import { useCrmApp } from "../../providers/CrmProvider";
 import { PageHeader, SmartActionButton, StatusBadge, SurfaceCard } from "../crm-ui";
@@ -59,13 +58,7 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { Input } from "../ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 
 type TaskPriority = "High" | "Medium" | "Low";
 
@@ -84,20 +77,111 @@ interface TaskRow {
 }
 
 const fallbackTasks: TaskRow[] = [
-  { id: 1, title: "Send updated proposal to TechCorp", client: "James Hartwell", due: "Today", priority: "High", assignee: "Alex", done: false, status: "open" },
-  { id: 2, title: "Follow up with NovaStar Ltd", client: "Aisha Patel", due: "Today", priority: "High", assignee: "Alex", done: false, status: "open" },
-  { id: 3, title: "Prepare Q1 sales report", client: "Internal", due: "Mar 16", priority: "Medium", assignee: "Alex", done: false, status: "in_progress" },
-  { id: 4, title: "Schedule onboarding call with Orbit Tech", client: "Daniel Kim", due: "Mar 17", priority: "Medium", assignee: "Sarah", done: false, status: "open" },
-  { id: 5, title: "Review contract — Nexus Corp", client: "Sarah Mitchell", due: "Mar 18", priority: "High", assignee: "Alex", done: false, status: "open" },
-  { id: 6, title: "Update CRM with new leads", client: "Internal", due: "Mar 19", priority: "Low", assignee: "Tom", done: false, status: "open" },
-  { id: 7, title: "Send welcome email sequence", client: "CloudBase Inc.", due: "Mar 20", priority: "Medium", assignee: "Alex", done: true, status: "done" },
-  { id: 8, title: "Demo call with BlueSky Digital", client: "Lena Vogt", due: "Mar 14", priority: "High", assignee: "Alex", done: true, status: "done" },
-  { id: 9, title: "Collect feedback from Vertex Solutions", client: "Carlos Mendes", due: "Mar 12", priority: "Low", assignee: "Sarah", done: true, status: "done" },
+  {
+    id: 1,
+    title: "Send updated proposal to TechCorp",
+    client: "James Hartwell",
+    due: "Today",
+    priority: "High",
+    assignee: "Alex",
+    done: false,
+    status: "open",
+  },
+  {
+    id: 2,
+    title: "Follow up with NovaStar Ltd",
+    client: "Aisha Patel",
+    due: "Today",
+    priority: "High",
+    assignee: "Alex",
+    done: false,
+    status: "open",
+  },
+  {
+    id: 3,
+    title: "Prepare Q1 sales report",
+    client: "Internal",
+    due: "Mar 16",
+    priority: "Medium",
+    assignee: "Alex",
+    done: false,
+    status: "in_progress",
+  },
+  {
+    id: 4,
+    title: "Schedule onboarding call with Orbit Tech",
+    client: "Daniel Kim",
+    due: "Mar 17",
+    priority: "Medium",
+    assignee: "Sarah",
+    done: false,
+    status: "open",
+  },
+  {
+    id: 5,
+    title: "Review contract — Nexus Corp",
+    client: "Sarah Mitchell",
+    due: "Mar 18",
+    priority: "High",
+    assignee: "Alex",
+    done: false,
+    status: "open",
+  },
+  {
+    id: 6,
+    title: "Update CRM with new leads",
+    client: "Internal",
+    due: "Mar 19",
+    priority: "Low",
+    assignee: "Tom",
+    done: false,
+    status: "open",
+  },
+  {
+    id: 7,
+    title: "Send welcome email sequence",
+    client: "CloudBase Inc.",
+    due: "Mar 20",
+    priority: "Medium",
+    assignee: "Alex",
+    done: true,
+    status: "done",
+  },
+  {
+    id: 8,
+    title: "Demo call with BlueSky Digital",
+    client: "Lena Vogt",
+    due: "Mar 14",
+    priority: "High",
+    assignee: "Alex",
+    done: true,
+    status: "done",
+  },
+  {
+    id: 9,
+    title: "Collect feedback from Vertex Solutions",
+    client: "Carlos Mendes",
+    due: "Mar 12",
+    priority: "Low",
+    assignee: "Sarah",
+    done: true,
+    status: "done",
+  },
 ];
 
 const taskTemplates = [
-  { title: "Review expansion brief for Quantum AI", client: "Lily Wang", dueInDays: 1, priority: "High" as const },
-  { title: "Send recap notes to Orbit Technologies", client: "Daniel Kim", dueInDays: 3, priority: "Medium" as const },
+  {
+    title: "Review expansion brief for Quantum Systems",
+    client: "Lily Wang",
+    dueInDays: 1,
+    priority: "High" as const,
+  },
+  {
+    title: "Send recap notes to Orbit Technologies",
+    client: "Daniel Kim",
+    dueInDays: 3,
+    priority: "Medium" as const,
+  },
   { title: "Clean inbound lead tags", client: "Internal", dueInDays: 5, priority: "Low" as const },
 ];
 
@@ -194,7 +278,7 @@ function buildTaskRows(
   contacts: Awaited<ReturnType<typeof fetchContacts>>,
   deals: Awaited<ReturnType<typeof fetchDeals>>,
   currentUserName?: string,
-  currentUserId?: string,
+  currentUserId?: string
 ) {
   const contactMap = new Map(contacts.map((contact) => [contact.id, contact]));
   const dealMap = new Map(deals.map((deal) => [deal.id, deal]));
@@ -218,7 +302,7 @@ function buildTaskRows(
       priority: getPriorityFromDueDate(task.due_at),
       assignee:
         task.assignee_id && task.assignee_id === currentUserId
-          ? currentUserName ?? "You"
+          ? (currentUserName ?? "You")
           : task.assignee_id
             ? "Teammate"
             : "Unassigned",
@@ -246,25 +330,17 @@ function buildLocalTaskRows(tasks: LocalQuickTask[]) {
 }
 
 export function TasksPage() {
-  const {
-    clearAssistantSelection,
-    connection,
-    isGuest,
-    setAssistantSelection,
-    user,
-  } = useCrmApp();
+  const { clearAssistantSelection, connection, isGuest, setAssistantSelection, user } = useCrmApp();
   const guestPreviewMessage =
     "Guest mode is showing demo task data so you can explore the CRM without registration.";
   const [tasks, setTasks] = useState(fallbackTasks);
-  const [localTasks, setLocalTasks] = useState<LocalQuickTask[]>(() =>
-    listLocalQuickTasks(),
-  );
+  const [localTasks, setLocalTasks] = useState<LocalQuickTask[]>(() => listLocalQuickTasks());
   const [contactIds, setContactIds] = useState<string[]>([]);
   const [filter, setFilter] = useState<"active" | "all" | "done">("active");
   const [priorityFilter, setPriorityFilter] = useState<"all" | TaskPriority>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [dataSource, setDataSource] = useState<"loading" | "live" | "preview">(
-    connection === "loading" ? "loading" : "preview",
+    connection === "loading" ? "loading" : "preview"
   );
   const [isSaving, setIsSaving] = useState(false);
   const [isSyncingLocal, setIsSyncingLocal] = useState(false);
@@ -279,7 +355,7 @@ export function TasksPage() {
       ? "Backend connection is unavailable, so the tasks workspace is showing preview data."
       : isGuest
         ? guestPreviewMessage
-      : null,
+        : null
   );
   const sourceTone =
     dataSource === "live" ? "success" : dataSource === "loading" || isGuest ? "info" : "warning";
@@ -292,7 +368,15 @@ export function TasksPage() {
           ? "Guest tasks"
           : "Preview tasks";
 
-  const loadTasks = async () => {
+  useEffect(() => {
+    const syncLocalTasks = () => {
+      setLocalTasks(listLocalQuickTasks());
+    };
+
+    return subscribeToLocalQuickTasks(syncLocalTasks);
+  }, []);
+
+  const loadTasks = useCallback(async () => {
     const [contactRecords, dealRecords, taskRecords] = await Promise.all([
       fetchContacts(),
       fetchDeals(),
@@ -303,15 +387,7 @@ export function TasksPage() {
     setTasks(buildTaskRows(taskRecords, contactRecords, dealRecords, user?.name, user?.id));
     setDataSource("live");
     setError(null);
-  };
-
-  useEffect(() => {
-    const syncLocalTasks = () => {
-      setLocalTasks(listLocalQuickTasks());
-    };
-
-    return subscribeToLocalQuickTasks(syncLocalTasks);
-  }, []);
+  }, [user?.name, user?.id]);
 
   useEffect(() => {
     if (connection === "loading") {
@@ -324,7 +400,7 @@ export function TasksPage() {
       setError(
         connection === "fallback"
           ? "Backend connection is unavailable, so the tasks workspace is showing preview data."
-          : guestPreviewMessage,
+          : guestPreviewMessage
       );
       return;
     }
@@ -334,7 +410,7 @@ export function TasksPage() {
     const sync = async () => {
       try {
         await loadTasks();
-      } catch (loadError) {
+      } catch (_loadError) {
         if (cancelled) {
           return;
         }
@@ -343,7 +419,7 @@ export function TasksPage() {
         setError(
           isGuest
             ? guestPreviewMessage
-            : "Using preview task data because the live tasks could not be loaded.",
+            : "Using preview task data because the live tasks could not be loaded."
         );
       }
     };
@@ -353,7 +429,7 @@ export function TasksPage() {
     return () => {
       cancelled = true;
     };
-  }, [connection, user?.id, user?.name]);
+  }, [connection, isGuest, loadTasks]);
 
   useEffect(() => {
     setAssistantSelection(
@@ -366,7 +442,7 @@ export function TasksPage() {
           entity_id: String(task.id),
         })),
         summary: "Task execution and follow-up context",
-      }),
+      })
     );
 
     return () => {
@@ -376,20 +452,17 @@ export function TasksPage() {
 
   const mergedTasks = [...buildLocalTaskRows(localTasks), ...tasks];
   const localPendingCount = localTasks.filter(
-    (task) => task.status !== "done" && task.status !== "cancelled",
+    (task) => task.status !== "done" && task.status !== "cancelled"
   ).length;
   const canSyncLocalTasks =
     localTasks.length > 0 && (connection === "live" || connection === "bootstrapped");
   const normalizedSearch = searchQuery.trim().toLowerCase();
-  const filtered = mergedTasks.filter((task) =>
-    (filter === "all" ? true : filter === "done" ? task.done : !task.done)
-    && (priorityFilter === "all" ? true : task.priority === priorityFilter)
-    && (
-      normalizedSearch.length === 0
-      || `${task.title} ${task.client} ${task.assignee}`
-        .toLowerCase()
-        .includes(normalizedSearch)
-    ),
+  const filtered = mergedTasks.filter(
+    (task) =>
+      (filter === "all" ? true : filter === "done" ? task.done : !task.done) &&
+      (priorityFilter === "all" ? true : task.priority === priorityFilter) &&
+      (normalizedSearch.length === 0 ||
+        `${task.title} ${task.client} ${task.assignee}`.toLowerCase().includes(normalizedSearch))
   );
   const completedCount = mergedTasks.filter((task) => task.done).length;
   const pendingCount = mergedTasks.length - completedCount;
@@ -427,8 +500,8 @@ export function TasksPage() {
               status,
               done: status === "done",
             }
-          : entry,
-      ),
+          : entry
+      )
     );
   };
 
@@ -442,10 +515,10 @@ export function TasksPage() {
     }
 
     const localTargets = targets.filter(
-      (task) => typeof task.id === "string" && isLocalQuickTaskId(task.id),
+      (task) => typeof task.id === "string" && isLocalQuickTaskId(task.id)
     );
     const remoteTargets = targets.filter(
-      (task) => !(typeof task.id === "string" && isLocalQuickTaskId(task.id)),
+      (task) => !(typeof task.id === "string" && isLocalQuickTaskId(task.id))
     );
 
     for (const task of localTargets) {
@@ -467,16 +540,14 @@ export function TasksPage() {
       for (const task of remoteTargets) {
         try {
           await updateTask(String(task.id), { status: nextStatus });
-        } catch (updateError) {
+        } catch (_updateError) {
           failedCount += 1;
-          
         }
       }
 
       try {
         await loadTasks();
-      } catch (refreshError) {
-        
+      } catch (_refreshError) {
       } finally {
         setIsSaving(false);
       }
@@ -496,10 +567,8 @@ export function TasksPage() {
     const targetIds = new Set(remoteTargets.map((task) => task.id));
     setTasks((previous) =>
       previous.map((task) =>
-        targetIds.has(task.id)
-          ? { ...task, status: nextStatus, done: nextStatus === "done" }
-          : task,
-      ),
+        targetIds.has(task.id) ? { ...task, status: nextStatus, done: nextStatus === "done" } : task
+      )
     );
     toast.success("Bulk update complete", {
       description: `${targets.length} task${targets.length === 1 ? "" : "s"} moved to ${workflowStatusConfig[nextStatus].label.toLowerCase()}.`,
@@ -567,7 +636,7 @@ export function TasksPage() {
           description: "Task details were saved to the live workspace.",
         });
         closeEditDialog();
-      } catch (updateError) {
+      } catch (_updateError) {
         // Error handled by toast
         toast.error("Could not update task", {
           description: "Task details could not be saved right now.",
@@ -592,8 +661,8 @@ export function TasksPage() {
               client: context || "Internal",
               contextNote: context || null,
             }
-          : task,
-      ),
+          : task
+      )
     );
     toast.success("Task updated", {
       description: "Task details were updated in preview mode.",
@@ -618,7 +687,7 @@ export function TasksPage() {
       try {
         await createTask({
           title: template.title,
-          contact_id: template.client === "Internal" ? null : contactIds[0] ?? null,
+          contact_id: template.client === "Internal" ? null : (contactIds[0] ?? null),
           assignee_id: user?.id ?? null,
           status: "open",
           due_at: addDays(template.dueInDays),
@@ -628,7 +697,7 @@ export function TasksPage() {
         toast.warning("Task added", {
           description: `${template.title} is now in the active queue.`,
         });
-      } catch (createError) {
+      } catch (_createError) {
         // Error handled by toast
         toast.error("Could not add task", {
           description: "The live task record could not be created right now.",
@@ -670,8 +739,7 @@ export function TasksPage() {
     let failedCount = 0;
     const syncedIds: string[] = [];
     const orderedQueue = [...localTasks].sort(
-      (left, right) =>
-        new Date(left.created_at).getTime() - new Date(right.created_at).getTime(),
+      (left, right) => new Date(left.created_at).getTime() - new Date(right.created_at).getTime()
     );
 
     for (const localTask of orderedQueue) {
@@ -688,9 +756,8 @@ export function TasksPage() {
               : null,
         });
         syncedIds.push(localTask.id);
-      } catch (syncError) {
+      } catch (_syncError) {
         failedCount += 1;
-        
       }
     }
 
@@ -714,15 +781,14 @@ export function TasksPage() {
 
     try {
       await loadTasks();
-    } catch (loadError) {
-      
+    } catch (_loadError) {
     } finally {
       setIsSyncingLocal(false);
     }
   };
 
-  const handleAIFollowUpTask = async () => {
-    toast.info("AI follow-up prepared", {
+  const handleAgentPFollowUpTask = async () => {
+    toast.info("AgentP follow-up prepared", {
       description:
         "The next step is connecting thread summaries and stalled deals so CRMP can create the right task automatically.",
     });
@@ -778,16 +844,18 @@ export function TasksPage() {
                 },
               },
               {
-                label: "AI follow-up task",
-                description: "Use the assistant to create the next task from recent deal or inbox signals.",
+                label: "AgentP follow-up task",
+                description:
+                  "Use the assistant to create the next task from recent deal or inbox signals.",
                 icon: Bot,
                 onSelect: () => {
-                  void handleAIFollowUpTask();
+                  void handleAgentPFollowUpTask();
                 },
               },
               {
                 label: "Attach automation rule",
-                description: "Turn recurring tasks into triggered workflows instead of manual reminders.",
+                description:
+                  "Turn recurring tasks into triggered workflows instead of manual reminders.",
                 onSelect: handleAutomationRule,
               },
             ]}
@@ -802,7 +870,10 @@ export function TasksPage() {
       ) : null}
 
       {localTasks.length > 0 ? (
-        <SurfaceCard tone="subtle" className="flex flex-wrap items-center justify-between gap-3 p-4">
+        <SurfaceCard
+          tone="subtle"
+          className="flex flex-wrap items-center justify-between gap-3 p-4"
+        >
           <div className="space-y-1">
             <p className="text-sm font-semibold text-foreground">
               {localTasks.length} locally captured task{localTasks.length === 1 ? "" : "s"}
@@ -838,6 +909,7 @@ export function TasksPage() {
       <div className="flex flex-wrap items-center gap-2">
         {(["active", "all", "done"] as const).map((value) => (
           <button
+            type="button"
             key={value}
             onClick={() => setFilter(value)}
             className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
@@ -846,11 +918,7 @@ export function TasksPage() {
                 : "border-border/80 bg-card/75 text-muted-foreground hover:border-primary/12 hover:text-foreground"
             }`}
           >
-            {value === "active"
-              ? "Active"
-              : value === "done"
-                ? "Completed"
-                : "All Tasks"}
+            {value === "active" ? "Active" : value === "done" ? "Completed" : "All Tasks"}
           </button>
         ))}
       </div>
@@ -865,6 +933,7 @@ export function TasksPage() {
         <div className="flex flex-wrap items-center gap-2">
           {(["all", "High", "Medium", "Low"] as const).map((value) => (
             <button
+              type="button"
               key={value}
               onClick={() => setPriorityFilter(value)}
               className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
@@ -933,6 +1002,7 @@ export function TasksPage() {
               }`}
             >
               <button
+                type="button"
                 onClick={() => void toggle(task.id)}
                 disabled={isSyncingLocal}
                 className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md border transition-colors ${
@@ -960,9 +1030,7 @@ export function TasksPage() {
                   <StatusBadge tone={workflowStatusConfig[task.status].tone}>
                     {workflowStatusConfig[task.status].label}
                   </StatusBadge>
-                  {task.isLocal ? (
-                    <StatusBadge tone="info">Local</StatusBadge>
-                  ) : null}
+                  {task.isLocal ? <StatusBadge tone="info">Local</StatusBadge> : null}
                 </div>
                 <p className="mt-1 text-sm text-muted-foreground">{task.client}</p>
               </div>
@@ -1020,9 +1088,7 @@ export function TasksPage() {
                       Mark complete
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={() => openEditDialog(task)}
-                    >
+                    <DropdownMenuItem onClick={() => openEditDialog(task)}>
                       <Pencil className="size-4" />
                       Edit details
                     </DropdownMenuItem>
@@ -1125,11 +1191,7 @@ export function TasksPage() {
           </div>
 
           <DialogFooter className="border-t border-border/80 px-5 py-4">
-            <Button
-              variant="outline"
-              onClick={closeEditDialog}
-              disabled={isEditingTask}
-            >
+            <Button variant="outline" onClick={closeEditDialog} disabled={isEditingTask}>
               Cancel
             </Button>
             <Button

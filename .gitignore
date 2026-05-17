@@ -1,95 +1,63 @@
 # Dependencies
 node_modules/
-.pnpm-store/
+.pnp
+.pnp.js
 
 # Build outputs
 dist/
 build/
-*.tgz
-*.tar.gz
+*.tsbuildinfo
 
-# Environment files
+# Environment
 .env
 .env.local
 .env.*.local
-!/.env.example
-
-# Virtual environments
-.venv/
-.venv-*/
 
 # IDE
-.vscode/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/settings.json
 .idea/
 *.swp
 *.swo
-*~
 
-# OS files
+# OS
 .DS_Store
 Thumbs.db
-*.tmp
 
 # Logs
-*.log
-logs/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+*.log
 
 # Testing
-.coverage/
-htmlcov/
-.pytest_cache/
-.ruff_cache/
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
+coverage/
+.nyc_output/
 
-# Database
-*.db
-*.sqlite
-*.sqlite3
+# Backend
+backend/.venv/
+backend/__pycache__/
+backend/app/__pycache__/
+backend/**/*.pyc
+backend/.pytest_cache/
+backend/.ruff_cache/
 
-# Temporary files
-*.tmp
-*.temp
-.cache/
+# Docker
+backend/postgres_data/
+backend/redis_data/
 
-# Backup files
-*.bak
-*.backup
-
-# macOS
-.AppleDouble
-.LSOverride
-
-# LM Studio (large binary)
-*.app/
-LM Studio*.app/
-
-# Python
-*.egg-info/
-dist/
-build/
-*.egg
-
-# Alembic
-alembic/versions/*.pyc
+# Local AI models
+models/*/
+!models/.gitkeep
 
 # Misc
-.local-apps/
+*.pem
+.cache/
+.temp/
+.tmp/
 
-# ── GSD baseline (auto-generated) ──
-.gsd
-*.code-workspace
-.env.*
-!.env.example
-.next/
-venv/
-target/
-vendor/
-coverage/
-tmp/
+# Kimi
+.kimi/sessions/
+.gitnexus

@@ -1,39 +1,34 @@
 import {
-  useCallback,
   createContext,
+  type ReactNode,
   startTransition,
+  useCallback,
   useContext,
   useEffect,
   useState,
-  type ReactNode,
 } from "react";
 
 import {
-  CrmApiError,
+  type AuthenticatedUser,
   bootstrapCurrentWorkspace,
+  CrmApiError,
+  type CrmSession,
+  type DashboardOverview,
   fetchCrmHealth,
   fetchCurrentWorkspace,
   fetchDashboardOverview,
+  type LoginPayload,
   loginToCrm,
   logoutFromCrm,
+  type RegistrationPayload,
   registerToCrm,
   restoreCrmSession,
-  type AuthenticatedUser,
-  type CrmSession,
-  type DashboardOverview,
-  type LoginPayload,
-  type RegistrationPayload,
   type Workspace,
 } from "../lib/crm-api";
 import { guestDashboard, guestWorkspace } from "../lib/fallback-data";
 
 export type CrmAuthState = "loading" | "authenticated" | "guest" | "anonymous";
-export type CrmConnectionState =
-  | "loading"
-  | "live"
-  | "bootstrapped"
-  | "guest"
-  | "fallback";
+export type CrmConnectionState = "loading" | "live" | "bootstrapped" | "guest" | "fallback";
 export type AssistantSelection = Record<string, unknown> | null;
 
 interface CrmContextValue {
@@ -182,13 +177,12 @@ function buildFallbackState(error: unknown): CrmState {
 
 export function CrmProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<CrmState>(initialState);
-  const [assistantSelection, setAssistantSelectionState] =
-    useState<AssistantSelection>(null);
+  const [assistantSelection, setAssistantSelectionState] = useState<AssistantSelection>(null);
 
   const recoverAnonymousState = async (error: unknown) => {
     try {
       const anonymousState = await loadAnonymousState(
-        error instanceof Error ? error.message : "Unable to authenticate right now.",
+        error instanceof Error ? error.message : "Unable to authenticate right now."
       );
       startTransition(() => {
         setState(anonymousState);
@@ -234,13 +228,13 @@ export function CrmProvider({ children }: { children: ReactNode }) {
     startTransition(() => {
       setAssistantSelectionState(selection);
     });
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const clearAssistantSelection = useCallback(() => {
     startTransition(() => {
       setAssistantSelectionState(null);
     });
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const signIn = async (payload: LoginPayload) => {
     startTransition(() => {
@@ -312,6 +306,7 @@ export function CrmProvider({ children }: { children: ReactNode }) {
     await refresh();
   };
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: refresh is defined above
   useEffect(() => {
     void refresh();
   }, []);
@@ -320,8 +315,7 @@ export function CrmProvider({ children }: { children: ReactNode }) {
     <CrmContext.Provider
       value={{
         ...state,
-        isLoading:
-          state.authState === "loading" || state.connection === "loading",
+        isLoading: state.authState === "loading" || state.connection === "loading",
         isGuest: state.authState === "guest" || state.connection === "guest",
         refresh,
         signIn,

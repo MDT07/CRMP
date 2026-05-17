@@ -1,5 +1,5 @@
 import { AlertTriangle, ArrowLeft, Home, LogIn, LogOut, RefreshCw } from "lucide-react";
-import { Link, isRouteErrorResponse, useNavigate, useRouteError } from "react-router";
+import { isRouteErrorResponse, Link, useNavigate, useRouteError } from "react-router";
 
 import { useCrmApp } from "../providers/CrmProvider";
 import { BrandLockup } from "./Brand";
@@ -32,6 +32,8 @@ function getErrorCopy(error: unknown) {
       status: "Error",
       title: "Something interrupted the workspace",
       detail: error.message || "The CRM route failed to render correctly.",
+      stack: error.stack,
+      raw: error,
     };
   }
 
@@ -39,6 +41,7 @@ function getErrorCopy(error: unknown) {
     status: "Error",
     title: "Something interrupted the workspace",
     detail: "The CRM route failed to render correctly.",
+    raw: error,
   };
 }
 
@@ -77,6 +80,11 @@ export function AppRouteErrorBoundary() {
             <div className="min-w-0">
               <h1 className="text-foreground">{copy.title}</h1>
               <p className="mt-2 text-sm text-muted-foreground">{copy.detail}</p>
+              {"stack" in copy && copy.stack && (
+                <pre className="mt-3 text-xs text-muted-foreground/60 overflow-auto max-h-40 bg-muted/50 p-2 rounded-lg">
+                  {copy.stack}
+                </pre>
+              )}
             </div>
           </div>
 
@@ -93,11 +101,7 @@ export function AppRouteErrorBoundary() {
               ) : (
                 <LogIn className="size-4" />
               )}
-              {authState === "authenticated"
-                ? "Switch account"
-                : isGuest
-                  ? "Sign in"
-                  : "Open auth"}
+              {authState === "authenticated" ? "Switch account" : isGuest ? "Sign in" : "Open auth"}
             </Button>
             <Button
               variant="ghost"

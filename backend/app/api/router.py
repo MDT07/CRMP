@@ -3,7 +3,6 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from app.api import (
-    routes_ai,
     routes_analytics,
     routes_api_keys,
     routes_auth,
@@ -15,11 +14,8 @@ from app.api import (
     routes_health,
     routes_integrations,
     routes_messages,
-    routes_multi_agent,
-    routes_nemotron,
     routes_organizations,
     routes_projects,
-    routes_swarm,
     routes_tasks,
 )
 
@@ -35,10 +31,6 @@ api_router.include_router(routes_messages.router)
 api_router.include_router(routes_tasks.router)
 api_router.include_router(routes_projects.router)
 api_router.include_router(routes_analytics.router)
-api_router.include_router(routes_ai.router)
-api_router.include_router(routes_nemotron.router)
-api_router.include_router(routes_multi_agent.router)
 api_router.include_router(routes_automation.router)
 api_router.include_router(routes_email.router)
 api_router.include_router(routes_integrations.router)
-api_router.include_router(routes_swarm.router)

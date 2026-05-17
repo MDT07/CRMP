@@ -11,10 +11,7 @@ export function toAmountNumber(value: number | string | null | undefined) {
   return 0;
 }
 
-export function formatCurrencyValue(
-  value: number | string | null | undefined,
-  currency = "USD",
-) {
+export function formatCurrencyValue(value: number | string | null | undefined, currency = "USD") {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency,
@@ -22,10 +19,7 @@ export function formatCurrencyValue(
   }).format(toAmountNumber(value));
 }
 
-export function formatCompactCurrency(
-  value: number | string | null | undefined,
-  currency = "USD",
-) {
+export function formatCompactCurrency(value: number | string | null | undefined, currency = "USD") {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency,
@@ -93,7 +87,7 @@ export function formatDueLabel(dateInput?: string | null) {
   const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   const startOfTarget = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   const diffDays = Math.round(
-    (startOfTarget.getTime() - startOfToday.getTime()) / (24 * 60 * 60 * 1000),
+    (startOfTarget.getTime() - startOfToday.getTime()) / (24 * 60 * 60 * 1000)
   );
 
   if (diffDays === 0) {

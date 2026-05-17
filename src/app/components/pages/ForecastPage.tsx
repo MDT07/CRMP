@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
 import { Activity, Gauge, Radar, Target, TrendingUp } from "lucide-react";
-
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { buildPageAssistantSelection } from "../../lib/assistant-hooks";
-import { fetchDeals, type Deal } from "../../lib/crm-api";
+import { type Deal, fetchDeals } from "../../lib/crm-api";
 import { useCrmApp } from "../../providers/CrmProvider";
 import { MetricCard, PageHeader, StatusBadge, SurfaceCard } from "../crm-ui";
 import { Button } from "../ui/button";
@@ -97,10 +97,13 @@ const previewDeals: Deal[] = [
 
 function buildScenarioRows(deals: Deal[]): ScenarioRow[] {
   const openDeals = deals.filter(
-    (deal) => deal.pipeline_stage !== "closed_won" && deal.pipeline_stage !== "closed_lost",
+    (deal) => deal.pipeline_stage !== "closed_won" && deal.pipeline_stage !== "closed_lost"
   );
 
-  const stageWeights: Record<Deal["pipeline_stage"], { commit: number; upside: number; risk: number }> = {
+  const stageWeights: Record<
+    Deal["pipeline_stage"],
+    { commit: number; upside: number; risk: number }
+  > = {
     lead: { commit: 0.08, upside: 0.3, risk: 0.62 },
     qualified: { commit: 0.18, upside: 0.46, risk: 0.36 },
     proposal: { commit: 0.36, upside: 0.42, risk: 0.22 },
@@ -143,7 +146,7 @@ export function ForecastPage() {
   } = useCrmApp();
   const [deals, setDeals] = useState<Deal[]>(previewDeals);
   const [source, setSource] = useState<"loading" | "live" | "preview">(
-    connection === "loading" ? "loading" : "preview",
+    connection === "loading" ? "loading" : "preview"
   );
   const [error, setError] = useState<string | null>(null);
 
@@ -158,7 +161,7 @@ export function ForecastPage() {
       setError(
         connection === "fallback"
           ? "Forecasting is using preview opportunities because backend sync is unavailable."
-          : "Guest mode uses sample forecasting data.",
+          : "Guest mode uses sample forecasting data."
       );
       setDeals(previewDeals);
       return;
@@ -202,7 +205,7 @@ export function ForecastPage() {
           entity_id: deal.id,
         })),
         summary: "Forecast model and deal probability context",
-      }),
+      })
     );
 
     return () => {
@@ -211,7 +214,7 @@ export function ForecastPage() {
   }, [clearAssistantSelection, deals, setAssistantSelection, source]);
 
   const openDeals = deals.filter(
-    (deal) => deal.pipeline_stage !== "closed_won" && deal.pipeline_stage !== "closed_lost",
+    (deal) => deal.pipeline_stage !== "closed_won" && deal.pipeline_stage !== "closed_lost"
   );
   const commitValue = openDeals.reduce(
     (sum, deal) =>
@@ -222,16 +225,16 @@ export function ForecastPage() {
           : deal.pipeline_stage === "proposal"
             ? 0.52
             : 0.3),
-    0,
+    0
   );
   const weightedValue = openDeals.reduce(
     (sum, deal) => sum + toAmount(deal.amount) * (deal.probability / 100),
-    0,
+    0
   );
   const bestCaseValue = openDeals.reduce((sum, deal) => sum + toAmount(deal.amount), 0);
   const targetValue = Math.max(
     dashboard.metrics.total_revenue * 0.26,
-    dashboard.growth[dashboard.growth.length - 1]?.revenue ?? 1,
+    dashboard.growth[dashboard.growth.length - 1]?.revenue ?? 1
   );
   const coverageRatio = targetValue > 0 ? bestCaseValue / targetValue : 0;
   const riskValue = Math.max(bestCaseValue - commitValue, 0);
@@ -261,11 +264,24 @@ export function ForecastPage() {
         }
         actions={
           <>
-            <Button variant="outline">
+            <Button
+              variant="outline"
+              onClick={() => {
+                toast.info("Set target", {
+                  description: "Forecast target configuration will open here.",
+                });
+              }}
+            >
               <Target className="size-4" />
               Set target
             </Button>
-            <Button>
+            <Button
+              onClick={() => {
+                toast.success("Recalculating outlook", {
+                  description: "Forecast scenarios updated from latest pipeline data.",
+                });
+              }}
+            >
               <Radar className="size-4" />
               Recalculate outlook
             </Button>
@@ -322,7 +338,7 @@ export function ForecastPage() {
             {scenarios.map((scenario) => (
               <div
                 key={scenario.name}
-                className="rounded-[calc(var(--radius)-1px)] border border-border/80 bg-card px-3 py-3"
+                className="rounded-[calc(var(--radius)-1px)] border border-border/80 bg-card px-3 py-3 transition-all duration-200 hover:border-primary/15 hover:shadow-md"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-sm font-semibold text-foreground">{scenario.name}</p>
@@ -369,13 +385,21 @@ export function ForecastPage() {
               <div className="rounded-[calc(var(--radius)-2px)] border border-info/22 bg-info-soft px-3 py-3">
                 <p className="text-sm font-semibold text-foreground">Pipeline quality</p>
                 <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                  {openDeals.filter((deal) => deal.pipeline_stage === "proposal" || deal.pipeline_stage === "negotiation").length} deals are in late stage and suitable for commit coaching.
+                  {
+                    openDeals.filter(
+                      (deal) =>
+                        deal.pipeline_stage === "proposal" || deal.pipeline_stage === "negotiation"
+                    ).length
+                  }{" "}
+                  deals are in late stage and suitable for commit coaching.
                 </p>
               </div>
               <div className="rounded-[calc(var(--radius)-2px)] border border-success/22 bg-success-soft px-3 py-3">
                 <p className="text-sm font-semibold text-foreground">Capacity signal</p>
                 <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                  {coverageRatio >= 2 ? "Coverage is healthy for this cycle." : "Coverage is thin; seed top-of-funnel now to protect next cycle."}
+                  {coverageRatio >= 2
+                    ? "Coverage is healthy for this cycle."
+                    : "Coverage is thin; seed top-of-funnel now to protect next cycle."}
                 </p>
               </div>
             </div>

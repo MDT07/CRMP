@@ -1,11 +1,11 @@
 import {
   createContext,
+  type ReactNode,
   startTransition,
   useContext,
   useEffect,
   useMemo,
   useState,
-  type ReactNode,
 } from "react";
 
 export type ThemeMode = "light" | "dark" | "system";
@@ -66,7 +66,7 @@ function getInitialThemeMode(): ThemeMode {
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<ThemeMode>(() => getInitialThemeMode());
   const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>(() =>
-    resolveTheme(getInitialThemeMode()),
+    resolveTheme(getInitialThemeMode())
   );
 
   useEffect(() => {
@@ -115,7 +115,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         });
       },
     }),
-    [theme, resolvedTheme],
+    [theme, resolvedTheme]
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

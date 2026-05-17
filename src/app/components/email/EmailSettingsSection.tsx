@@ -1,29 +1,16 @@
-import { useEffect, useState } from "react";
 import { Mail, RefreshCw, Trash2 } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import {
   connectGmailAccount,
   deleteEmailAccount,
+  type EmailAccount,
   fetchEmailAccounts,
   syncEmails,
   updateEmailAccount,
-  type EmailAccount,
 } from "../../lib/crm-api";
-import {
-  PageHeader,
-  SurfaceCard,
-} from "../crm-ui";
-import { Button } from "../ui/button";
-import { Switch } from "../ui/switch";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "../ui/dialog";
+import { PageHeader, SurfaceCard } from "../crm-ui";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,6 +22,16 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "../ui/alert-dialog";
+import { Button } from "../ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "../ui/dialog";
+import { Switch } from "../ui/switch";
 
 interface EmailSettingsSectionProps {
   className?: string;
@@ -45,10 +42,6 @@ export function EmailSettingsSection({ className }: EmailSettingsSectionProps) {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [connecting, setConnecting] = useState(false);
-
-  useEffect(() => {
-    loadAccounts();
-  }, []);
 
   const loadAccounts = async () => {
     try {
@@ -69,8 +62,9 @@ export function EmailSettingsSection({ className }: EmailSettingsSectionProps) {
       const response = await connectGmailAccount();
       // Redirect to Google's OAuth consent screen
       window.location.href = response.auth_url;
-    } catch (error: any) {
-      const errorMessage = error?.message || "Failed to initiate Gmail connection";
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to initiate Gmail connection";
       toast.error(errorMessage);
       console.error("Error connecting Gmail:", error);
     } finally {
@@ -89,7 +83,7 @@ export function EmailSettingsSection({ className }: EmailSettingsSectionProps) {
       });
       setAccounts(accounts.map((a) => (a.id === account.id ? updated : a)));
       toast.success(
-        `Sync ${updated.sync_enabled ? "enabled" : "disabled"} for ${account.email_address}`,
+        `Sync ${updated.sync_enabled ? "enabled" : "disabled"} for ${account.email_address}`
       );
     } catch (error) {
       toast.error("Failed to update sync settings");
@@ -147,10 +141,7 @@ export function EmailSettingsSection({ className }: EmailSettingsSectionProps) {
   if (loading) {
     return (
       <div className={`p-6 ${className}`}>
-        <PageHeader
-          title="Email Accounts"
-          description="Connect and manage your email accounts"
-        />
+        <PageHeader title="Email Accounts" description="Connect and manage your email accounts" />
         <div className="mt-6 flex items-center justify-center p-12">
           <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
@@ -174,7 +165,7 @@ export function EmailSettingsSection({ className }: EmailSettingsSectionProps) {
             <RefreshCw className={`mr-2 h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
             {syncing ? "Syncing..." : "Sync All"}
           </Button>
-          
+
           <Dialog>
             <DialogTrigger asChild>
               <Button disabled={connecting}>
@@ -189,7 +180,7 @@ export function EmailSettingsSection({ className }: EmailSettingsSectionProps) {
                   Choose your email provider to connect your account.
                 </DialogDescription>
               </DialogHeader>
-              
+
               <div className="grid gap-4 py-4">
                 <Button
                   variant="outline"
@@ -207,7 +198,7 @@ export function EmailSettingsSection({ className }: EmailSettingsSectionProps) {
                     </span>
                   </div>
                 </Button>
-                
+
                 <Button
                   variant="outline"
                   className="h-auto justify-start gap-4 p-4"
@@ -251,7 +242,7 @@ export function EmailSettingsSection({ className }: EmailSettingsSectionProps) {
                     Choose your email provider to connect your account.
                   </DialogDescription>
                 </DialogHeader>
-                
+
                 <div className="grid gap-4 py-4">
                   <Button
                     variant="outline"
@@ -269,7 +260,7 @@ export function EmailSettingsSection({ className }: EmailSettingsSectionProps) {
                       </span>
                     </div>
                   </Button>
-                  
+
                   <Button
                     variant="outline"
                     className="h-auto justify-start gap-4 p-4"
@@ -298,7 +289,7 @@ export function EmailSettingsSection({ className }: EmailSettingsSectionProps) {
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
                     {getProviderIcon(account.provider)}
                   </div>
-                  
+
                   <div>
                     <div className="flex items-center gap-2">
                       <h4 className="font-semibold">{account.email_address}</h4>
@@ -306,7 +297,7 @@ export function EmailSettingsSection({ className }: EmailSettingsSectionProps) {
                         {getProviderLabel(account.provider)}
                       </span>
                     </div>
-                    
+
                     <div className="mt-1 flex items-center gap-4 text-sm text-muted-foreground">
                       <span>
                         Last synced:{" "}
@@ -317,7 +308,7 @@ export function EmailSettingsSection({ className }: EmailSettingsSectionProps) {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">Sync</span>
@@ -326,7 +317,7 @@ export function EmailSettingsSection({ className }: EmailSettingsSectionProps) {
                       onCheckedChange={() => handleToggleSync(account)}
                     />
                   </div>
-                  
+
                   <Button
                     variant="ghost"
                     size="icon"
@@ -335,7 +326,7 @@ export function EmailSettingsSection({ className }: EmailSettingsSectionProps) {
                   >
                     <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
                   </Button>
-                  
+
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button variant="ghost" size="icon" className="text-destructive">
@@ -346,8 +337,8 @@ export function EmailSettingsSection({ className }: EmailSettingsSectionProps) {
                       <AlertDialogHeader>
                         <AlertDialogTitle>Disconnect Email Account</AlertDialogTitle>
                         <AlertDialogDescription>
-                          This will disconnect {account.email_address} and stop syncing
-                          emails. This action cannot be undone.
+                          This will disconnect {account.email_address} and stop syncing emails. This
+                          action cannot be undone.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>

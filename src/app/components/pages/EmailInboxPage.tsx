@@ -1,14 +1,13 @@
+import { Mail, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router";
-import { Mail, Plus } from "lucide-react";
 import { toast } from "sonner";
-
+import { type EmailAccount, fetchEmailAccounts } from "../../lib/crm-api";
+import { PageHeader, SurfaceCard } from "../crm-ui";
 import { EmailList } from "../email/EmailList";
 import { EmailSettingsSection } from "../email/EmailSettingsSection";
-import { PageHeader, SurfaceCard } from "../crm-ui";
 import { Button } from "../ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
-import { fetchEmailAccounts, type EmailAccount } from "../../lib/crm-api";
 
 export function EmailInboxPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -36,29 +35,25 @@ export function EmailInboxPage() {
   }, [searchParams, setSearchParams]);
 
   useEffect(() => {
-    loadAccounts();
+    const loadAccounts = async () => {
+      try {
+        setLoading(true);
+        const response = await fetchEmailAccounts();
+        setAccounts(response.accounts);
+      } catch (error) {
+        console.error("Error loading email accounts:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    void loadAccounts();
   }, []);
-
-  const loadAccounts = async () => {
-    try {
-      setLoading(true);
-      const response = await fetchEmailAccounts();
-      setAccounts(response.accounts);
-    } catch (error) {
-      console.error("Error loading email accounts:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const hasConnectedAccounts = accounts.length > 0;
 
   return (
     <div className="h-full space-y-6 p-6">
-      <PageHeader
-        title="Inbox"
-        description="View and manage your synced email conversations"
-      />
+      <PageHeader title="Inbox" description="View and manage your synced email conversations" />
 
       {!hasConnectedAccounts && !loading ? (
         <SurfaceCard className="p-12 text-center">
@@ -67,7 +62,8 @@ export function EmailInboxPage() {
           </div>
           <h2 className="mb-2 text-2xl font-semibold">Connect Your Email</h2>
           <p className="mb-6 max-w-md mx-auto text-muted-foreground">
-            Connect your email account to sync conversations with your contacts and see them in your CRM timeline.
+            Connect your email account to sync conversations with your contacts and see them in your
+            CRM timeline.
           </p>
           <Button onClick={() => setActiveTab("settings")}>
             <Plus className="mr-2 h-4 w-4" />

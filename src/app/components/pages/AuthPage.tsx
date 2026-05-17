@@ -1,4 +1,3 @@
-import { useEffect, useState, type FormEvent } from "react";
 import {
   ArrowRight,
   Bot,
@@ -6,39 +5,72 @@ import {
   MessageSquareMore,
   RefreshCcw,
   ShieldCheck,
+  Sparkles,
+  Zap,
 } from "lucide-react";
+import { type FormEvent, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { toast } from "sonner";
-
+import { CrmApiError } from "../../lib/crm-api";
+import { useCrmApp } from "../../providers/CrmProvider";
 import { BrandLockup } from "../Brand";
-import { isKnownAppPath } from "../shell-nav";
 import { StatusBadge, SurfaceCard } from "../crm-ui";
+import { isKnownAppPath } from "../shell-nav";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { cn } from "../ui/utils";
-import { CrmApiError } from "../../lib/crm-api";
-import { useCrmApp } from "../../providers/CrmProvider";
 
 type AuthMode = "signin" | "register";
 
 const featureHighlights = [
   {
     icon: ChartNoAxesCombined,
-    title: "Growth overview",
-    description: "Track revenue, pipeline momentum, and risk from one chart-first home page.",
+    title: "Growth Overview",
+    description:
+      "Track revenue, pipeline momentum, and forecast accuracy from one unified dashboard.",
+    color: "primary" as const,
   },
   {
     icon: MessageSquareMore,
-    title: "Unified communication",
-    description: "Bring email, WhatsApp, Instagram, and follow-ups into one operational inbox.",
+    title: "Unified Inbox",
+    description: "Email, WhatsApp, Instagram, and live chat — all conversations in one place.",
+    color: "info" as const,
   },
   {
     icon: Bot,
-    title: "AI copilot rail",
-    description: "Keep next-best actions, summaries, and reply drafts pinned to the right side of the app.",
+    title: "AgentP Assistant",
+    description:
+      "AgentP-powered insights, smart replies, and next-best actions at your fingertips.",
+    color: "accent" as const,
+  },
+  {
+    icon: Zap,
+    title: "Smart Automations",
+    description: "Workflow rules that trigger follow-ups, task creation, and deal stage updates.",
+    color: "success" as const,
+  },
+  {
+    icon: Sparkles,
+    title: "Deal Intelligence",
+    description: "Predictive scoring and health checks to focus on deals most likely to close.",
+    color: "warning" as const,
+  },
+  {
+    icon: ShieldCheck,
+    title: "Enterprise Security",
+    description: "Role-based access, audit logs, and secure API key management for teams.",
+    color: "primary" as const,
   },
 ];
+
+const colorClasses = {
+  primary: "bg-primary-soft text-primary border-primary/20",
+  info: "bg-info-soft text-info border-info/20",
+  success: "bg-success-soft text-success border-success/20",
+  warning: "bg-warning-soft text-warning border-warning/20",
+  accent: "bg-accent-soft text-accent border-accent/20",
+};
 
 function slugify(value: string) {
   return value
@@ -53,11 +85,9 @@ function getErrorMessage(error: unknown) {
   if (error instanceof CrmApiError) {
     return error.message;
   }
-
   if (error instanceof Error) {
     return error.message;
   }
-
   return "Something went wrong while reaching the CRM backend.";
 }
 
@@ -91,33 +121,21 @@ export function AuthPage() {
   });
 
   useEffect(() => {
-    if (slugEdited) {
-      return;
-    }
-
+    if (slugEdited) return;
     setSignUpValues((current) => {
       const generatedSlug = slugify(current.organizationName);
-      if (current.organizationSlug === generatedSlug) {
-        return current;
-      }
-
-      return {
-        ...current,
-        organizationSlug: generatedSlug,
-      };
+      if (current.organizationSlug === generatedSlug) return current;
+      return { ...current, organizationSlug: generatedSlug };
     });
-  }, [slugEdited, signUpValues.organizationName]);
+  }, [slugEdited]);
 
   const handleSignIn = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSubmitting(true);
     setFormError(null);
-
     try {
       await signIn(signInValues);
-      toast.success("Signed in", {
-        description: "Your live CRM workspace is ready.",
-      });
+      toast.success("Signed in", { description: "Your live CRM workspace is ready." });
       navigate(redirectTo);
     } catch (authError) {
       setFormError(getErrorMessage(authError));
@@ -130,12 +148,10 @@ export function AuthPage() {
     event.preventDefault();
     setSubmitting(true);
     setFormError(null);
-
     const payload = {
       ...signUpValues,
       organizationSlug: slugify(signUpValues.organizationSlug || signUpValues.organizationName),
     };
-
     try {
       await signUp(payload);
       toast.success("Workspace created", {
@@ -152,13 +168,11 @@ export function AuthPage() {
   const handleGuestMode = async () => {
     setSubmitting(true);
     setFormError(null);
-
     try {
       await continueAsGuest();
       toast.success("Guest mode enabled", {
-        description: "You can explore the CRM without creating an account first.",
+        description: "Explore the CRM without creating an account.",
       });
-      // Force navigation to root and replace history state
       navigate("/", { replace: true });
     } catch (guestError) {
       setFormError(getErrorMessage(guestError));
@@ -170,105 +184,107 @@ export function AuthPage() {
   const showOfflinePreview = connection === "fallback";
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-background text-foreground">
-      <div className="pointer-events-none absolute inset-0 crm-shell-bg" />
-      <div className="pointer-events-none absolute inset-0 opacity-20 crm-grid-bg" />
+    <div className="relative min-h-screen overflow-hidden bg-canvas text-foreground">
+      {/* Background Effects */}
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute top-0 left-1/4 h-[500px] w-[500px] rounded-full bg-primary/5 blur-[100px]" />
+        <div className="absolute bottom-0 right-1/4 h-[400px] w-[400px] rounded-full bg-accent/5 blur-[100px]" />
+      </div>
 
-      <div className="relative mx-auto flex min-h-screen max-w-[92rem] items-start px-6 py-10 lg:px-10">
-        <div className="grid w-full gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,28rem)]">
+      <div className="relative mx-auto flex min-h-screen max-w-[96rem] items-start px-6 py-8 lg:px-12">
+        <div className="grid w-full gap-8 xl:grid-cols-[1fr_420px]">
+          {/* Left Side - Marketing */}
           <section className="space-y-8">
             <div className="flex flex-wrap items-center gap-3">
-              <BrandLockup subtitle="Next-generation CRM system for revenue, relationships, and communication" />
-              <StatusBadge tone={showOfflinePreview ? "warning" : "success"}>
-                {showOfflinePreview ? "Preview available" : "Backend connected"}
+              <BrandLockup subtitle="Next-generation CRM for revenue teams" variant="gradient" />
+              <StatusBadge tone={showOfflinePreview ? "warning" : "success"} dot>
+                {showOfflinePreview ? "Preview mode" : "Backend connected"}
               </StatusBadge>
             </div>
 
-            <div className="max-w-3xl space-y-5">
-              <h1 className="text-balance">
-                Run CRMP by EmirCo from one confident, chart-first operating system.
+            <div className="max-w-2xl space-y-4">
+              <h1 className="text-4xl font-bold tracking-tight text-foreground lg:text-5xl">
+                Run your revenue operation from one intelligent platform.
               </h1>
-              <p className="max-w-2xl text-base text-muted-foreground sm:text-lg">
-                Keep your growth chart visible, your inbox centralized, and your AI
-                copilot close without cluttering the workflow.
+              <p className="text-lg text-muted-foreground leading-relaxed">
+                CRMP brings together pipeline management, unified communications, and AgentP-powered
+                insights — so your team can focus on closing deals.
               </p>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
-              {featureHighlights.map(({ icon: Icon, title, description }) => (
+            {/* Feature Grid */}
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {featureHighlights.map(({ icon: Icon, title, description, color }) => (
                 <SurfaceCard
                   key={title}
-                  tone="accent"
-                  className="gap-4 rounded-[calc(var(--radius)+10px)] border-primary/16 p-5"
+                  tone="default"
+                  padding="md"
+                  radius="lg"
+                  className="group hover-lift"
                 >
-                  <div className="flex size-12 items-center justify-center rounded-2xl border border-primary/18 bg-primary/12 text-primary">
+                  <div
+                    className={cn(
+                      "flex size-11 items-center justify-center rounded-xl border",
+                      colorClasses[color]
+                    )}
+                  >
                     <Icon className="size-5" />
                   </div>
-                  <div className="space-y-2">
-                    <p className="text-base font-semibold text-foreground">{title}</p>
-                    <p className="text-sm text-muted-foreground">{description}</p>
+                  <div className="mt-3 space-y-1">
+                    <p className="text-sm font-semibold text-foreground">{title}</p>
+                    <p className="text-xs text-muted-foreground leading-relaxed">{description}</p>
                   </div>
                 </SurfaceCard>
               ))}
             </div>
 
-            <SurfaceCard
-              tone="subtle"
-              className="grid gap-5 rounded-[calc(var(--radius)+12px)] border-border/80 p-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]"
-            >
-              <div className="space-y-3">
-                <StatusBadge tone="primary">Launch stack</StatusBadge>
-                <h2>What this step unlocks next</h2>
-                <p className="text-sm text-muted-foreground sm:text-base">
-                  With real sign-in and workspace creation in place, we can keep
-                  pushing the CRM toward production modules like inbox sync,
-                  workflow automation, and role-based access.
-                </p>
-              </div>
-              <div className="grid gap-3 text-sm text-muted-foreground">
-                <div className="rounded-[calc(var(--radius)+4px)] border border-border/80 bg-background px-4 py-3">
-                  <p className="font-semibold text-foreground">Workspace onboarding</p>
-                  <p>Teams start with a branded organization, live user identity, and seeded CRM records.</p>
+            {/* Stats Bar */}
+            <div className="flex flex-wrap items-center gap-6 rounded-2xl border border-border/40 bg-surface-muted/50 px-6 py-4">
+              {[
+                { value: "10K+", label: "Active users" },
+                { value: "$2.4B", label: "Pipeline managed" },
+                { value: "99.9%", label: "Uptime" },
+                { value: "4.9", label: "User rating" },
+              ].map((stat) => (
+                <div key={stat.label} className="flex items-center gap-2">
+                  <span className="text-lg font-bold text-foreground">{stat.value}</span>
+                  <span className="text-xs text-muted-foreground">{stat.label}</span>
                 </div>
-                <div className="rounded-[calc(var(--radius)+4px)] border border-border/80 bg-background px-4 py-3">
-                  <p className="font-semibold text-foreground">Secure session flow</p>
-                  <p>No more silent dev account generation inside the frontend.</p>
-                </div>
-              </div>
-            </SurfaceCard>
+              ))}
+            </div>
           </section>
 
-          <section>
+          {/* Right Side - Auth Form */}
+          <section className="xl:sticky xl:top-8">
             <SurfaceCard
-              tone="accent"
-              className="relative overflow-hidden rounded-[calc(var(--radius)+14px)] border-primary/18 p-6 shadow-[var(--shadow-elevated)]"
+              tone="default"
+              padding="lg"
+              radius="lg"
+              className="shadow-[var(--shadow-elevated)]"
             >
-              <div className="pointer-events-none absolute -top-12 -right-10 size-32 rounded-full bg-primary/12 blur-2xl" />
-              <div className="pointer-events-none absolute -bottom-14 -left-12 size-36 rounded-full bg-info-soft blur-2xl" />
-              <div className="relative">
               {showOfflinePreview ? (
                 <div className="space-y-6">
                   <div className="space-y-3">
-                    <StatusBadge tone="warning">Backend offline</StatusBadge>
-                    <h2>Preview the CRM shell while the backend is unavailable</h2>
-                    <p className="text-sm text-muted-foreground sm:text-base">
-                      Live sign-in is temporarily blocked because the backend cannot be
-                      reached. The local preview still lets us keep moving on layout,
-                      data flow, and UX.
+                    <StatusBadge tone="warning" dot>
+                      Backend offline
+                    </StatusBadge>
+                    <h2 className="text-xl font-semibold">Preview the CRM</h2>
+                    <p className="text-sm text-muted-foreground">
+                      Live sign-in is temporarily unavailable. Explore the CRM with demo data to see
+                      how it works for your team.
                     </p>
                   </div>
 
-                  <div className="rounded-[calc(var(--radius)+6px)] border border-border/80 bg-background px-4 py-4 text-sm text-muted-foreground">
+                  <div className="rounded-xl border border-border/40 bg-surface-muted/50 px-4 py-4">
                     <p className="font-semibold text-foreground">{workspace.name}</p>
-                    <p className="mt-1">
-                      Open the preview workspace to continue shaping the CRM shell, or
-                      restart the backend and come back here to sign in live.
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Continue with the preview workspace to explore all features.
                     </p>
                   </div>
 
                   <div className="flex flex-wrap gap-3">
                     <Button
-                      className="flex-1 cursor-pointer"
+                      className="flex-1 rounded-xl"
                       onClick={(e) => {
                         e.preventDefault();
                         void handleGuestMode();
@@ -280,35 +296,33 @@ export function AuthPage() {
                     </Button>
                     <Button
                       variant="outline"
+                      className="rounded-xl"
                       onClick={() => window.location.reload()}
                     >
-                      <RefreshCcw className="size-4" />
-                      Retry backend
+                      <RefreshCcw className="size-4 mr-1.5" />
+                      Retry
                     </Button>
                   </div>
 
-                  {error ? (
-                    <p className="text-sm text-warning">{error}</p>
-                  ) : null}
-                  {formError ? (
-                    <p className="text-sm text-danger">{formError}</p>
-                  ) : null}
+                  {error && <p className="text-sm text-destructive">{error}</p>}
+                  {formError && <p className="text-sm text-destructive">{formError}</p>}
                 </div>
               ) : (
-                <div className="space-y-6">
-                  <div className="space-y-3">
+                <div className="space-y-5">
+                  <div className="space-y-2">
                     <StatusBadge tone="primary">Workspace access</StatusBadge>
-                    <div className="space-y-2">
-                      <h2>{mode === "signin" ? "Sign in to your CRM" : "Create a new CRM workspace"}</h2>
-                      <p className="text-sm text-muted-foreground sm:text-base">
-                        {mode === "signin"
-                          ? "Resume your live pipeline, inbox, and AI context."
-                          : "Set up a branded workspace and start with seeded CRM data so the product feels alive immediately."}
-                      </p>
-                    </div>
+                    <h2 className="text-xl font-semibold">
+                      {mode === "signin" ? "Welcome back" : "Create your workspace"}
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                      {mode === "signin"
+                        ? "Sign in to access your pipeline, inbox, and team data."
+                        : "Set up a branded workspace with seeded demo data."}
+                    </p>
                   </div>
 
-                  <div className="inline-flex rounded-[calc(var(--radius)+4px)] border border-border/80 bg-background p-1">
+                  {/* Mode Toggle */}
+                  <div className="inline-flex rounded-xl border border-border/40 bg-surface-muted p-1">
                     <button
                       type="button"
                       onClick={() => {
@@ -316,10 +330,10 @@ export function AuthPage() {
                         setFormError(null);
                       }}
                       className={cn(
-                        "rounded-[calc(var(--radius)-4px)] px-4 py-2.5 text-sm font-semibold transition-colors",
+                        "rounded-lg px-4 py-2 text-sm font-semibold transition-all",
                         mode === "register"
-                          ? "bg-primary text-primary-foreground shadow-[var(--shadow-button)]"
-                          : "text-muted-foreground hover:text-foreground",
+                          ? "bg-primary text-white shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
                       )}
                     >
                       Create workspace
@@ -331,28 +345,29 @@ export function AuthPage() {
                         setFormError(null);
                       }}
                       className={cn(
-                        "rounded-[calc(var(--radius)-4px)] px-4 py-2.5 text-sm font-semibold transition-colors",
+                        "rounded-lg px-4 py-2 text-sm font-semibold transition-all",
                         mode === "signin"
-                          ? "bg-primary text-primary-foreground shadow-[var(--shadow-button)]"
-                          : "text-muted-foreground hover:text-foreground",
+                          ? "bg-primary text-white shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
                       )}
                     >
                       Sign in
                     </button>
                   </div>
 
-                  {error ? (
-                    <div className="rounded-[calc(var(--radius)+2px)] border border-info/18 bg-info-soft px-4 py-3 text-sm text-info">
+                  {/* Errors */}
+                  {error && (
+                    <div className="rounded-xl border border-info/20 bg-info-soft px-4 py-3 text-sm text-info">
                       {error}
                     </div>
-                  ) : null}
-
-                  {formError ? (
-                    <div className="rounded-[calc(var(--radius)+2px)] border border-danger/18 bg-danger-soft px-4 py-3 text-sm text-danger">
+                  )}
+                  {formError && (
+                    <div className="rounded-xl border border-destructive/20 bg-destructive-soft px-4 py-3 text-sm text-destructive">
                       {formError}
                     </div>
-                  ) : null}
+                  )}
 
+                  {/* Forms */}
                   {mode === "signin" ? (
                     <form className="space-y-4" onSubmit={handleSignIn}>
                       <div className="space-y-2">
@@ -362,14 +377,12 @@ export function AuthPage() {
                           type="email"
                           autoComplete="email"
                           value={signInValues.email}
-                          onChange={(event) =>
-                            setSignInValues((current) => ({
-                              ...current,
-                              email: event.target.value,
-                            }))
+                          onChange={(e) =>
+                            setSignInValues((c) => ({ ...c, email: e.target.value }))
                           }
-                          placeholder="team@emirco.com"
+                          placeholder="you@company.com"
                           required
+                          className="rounded-xl"
                         />
                       </div>
                       <div className="space-y-2">
@@ -379,19 +392,17 @@ export function AuthPage() {
                           type="password"
                           autoComplete="current-password"
                           value={signInValues.password}
-                          onChange={(event) =>
-                            setSignInValues((current) => ({
-                              ...current,
-                              password: event.target.value,
-                            }))
+                          onChange={(e) =>
+                            setSignInValues((c) => ({ ...c, password: e.target.value }))
                           }
                           placeholder="Enter your password"
                           required
+                          className="rounded-xl"
                         />
                       </div>
-                      <Button type="submit" className="w-full" disabled={submitting}>
+                      <Button type="submit" className="w-full rounded-xl" disabled={submitting}>
                         {submitting ? "Signing in..." : "Sign in to workspace"}
-                        <ArrowRight className="size-4" />
+                        <ArrowRight className="size-4 ml-1.5" />
                       </Button>
                     </form>
                   ) : (
@@ -401,110 +412,92 @@ export function AuthPage() {
                         <Input
                           id="signup-organization"
                           type="text"
-                          autoComplete="organization"
                           value={signUpValues.organizationName}
-                          onChange={(event) =>
-                            setSignUpValues((current) => ({
-                              ...current,
-                              organizationName: event.target.value,
-                            }))
+                          onChange={(e) =>
+                            setSignUpValues((c) => ({ ...c, organizationName: e.target.value }))
                           }
-                          placeholder="EmirCo Revenue Ops"
+                          placeholder="Acme Inc."
                           required
+                          className="rounded-xl"
                         />
                       </div>
-
                       <div className="space-y-2">
                         <Label htmlFor="signup-slug">Workspace slug</Label>
                         <Input
                           id="signup-slug"
                           type="text"
                           value={signUpValues.organizationSlug}
-                          onChange={(event) => {
+                          onChange={(e) => {
                             setSlugEdited(true);
-                            setSignUpValues((current) => ({
-                              ...current,
-                              organizationSlug: slugify(event.target.value),
+                            setSignUpValues((c) => ({
+                              ...c,
+                              organizationSlug: slugify(e.target.value),
                             }));
                           }}
-                          placeholder="emirco-revenue-ops"
+                          placeholder="acme-inc"
                           required
+                          className="rounded-xl"
                         />
                       </div>
-
                       <div className="space-y-2">
                         <Label htmlFor="signup-name">Your name</Label>
                         <Input
                           id="signup-name"
                           type="text"
-                          autoComplete="name"
                           value={signUpValues.name}
-                          onChange={(event) =>
-                            setSignUpValues((current) => ({
-                              ...current,
-                              name: event.target.value,
-                            }))
-                          }
-                          placeholder="Emir Semenov"
+                          onChange={(e) => setSignUpValues((c) => ({ ...c, name: e.target.value }))}
+                          placeholder="John Doe"
                           required
+                          className="rounded-xl"
                         />
                       </div>
-
                       <div className="space-y-2">
                         <Label htmlFor="signup-email">Work email</Label>
                         <Input
                           id="signup-email"
                           type="email"
-                          autoComplete="email"
                           value={signUpValues.email}
-                          onChange={(event) =>
-                            setSignUpValues((current) => ({
-                              ...current,
-                              email: event.target.value,
-                            }))
+                          onChange={(e) =>
+                            setSignUpValues((c) => ({ ...c, email: e.target.value }))
                           }
-                          placeholder="hello@emirco.com"
+                          placeholder="you@company.com"
                           required
+                          className="rounded-xl"
                         />
                       </div>
-
                       <div className="space-y-2">
                         <Label htmlFor="signup-password">Password</Label>
                         <Input
                           id="signup-password"
                           type="password"
-                          autoComplete="new-password"
                           value={signUpValues.password}
-                          onChange={(event) =>
-                            setSignUpValues((current) => ({
-                              ...current,
-                              password: event.target.value,
-                            }))
+                          onChange={(e) =>
+                            setSignUpValues((c) => ({ ...c, password: e.target.value }))
                           }
                           placeholder="Create a strong password"
                           required
+                          className="rounded-xl"
                         />
                       </div>
-
-                      <Button type="submit" className="w-full" disabled={submitting}>
-                        {submitting ? "Creating workspace..." : "Create workspace"}
-                        <ArrowRight className="size-4" />
+                      <Button type="submit" className="w-full rounded-xl" disabled={submitting}>
+                        {submitting ? "Creating..." : "Create workspace"}
+                        <ArrowRight className="size-4 ml-1.5" />
                       </Button>
                     </form>
                   )}
 
-                  <div className="space-y-3 rounded-[calc(var(--radius)+4px)] border border-border/80 bg-background px-4 py-4">
-                    <div className="space-y-1">
-                      <p className="text-sm font-semibold text-foreground">Try the CRM first</p>
-                      <p className="text-sm text-muted-foreground">
-                        Continue in guest mode without registration and explore the full
-                        product shell with demo workspace data.
+                  {/* Guest Mode */}
+                  <div className="rounded-xl border border-border/40 bg-surface-muted/30 px-4 py-4 space-y-3">
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">Try before you commit</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Explore the full CRM with demo data. No registration required.
                       </p>
                     </div>
                     <Button
                       type="button"
                       variant="outline"
-                      className="w-full cursor-pointer"
+                      className="w-full rounded-xl"
                       onClick={(e) => {
                         e.preventDefault();
                         void handleGuestMode();
@@ -512,27 +505,11 @@ export function AuthPage() {
                       disabled={submitting}
                     >
                       {submitting ? "Entering..." : "Continue as guest"}
-                      <ArrowRight className="size-4 ml-2" />
+                      <ArrowRight className="size-4 ml-1.5" />
                     </Button>
-                  </div>
-
-                  <div className="rounded-[calc(var(--radius)+4px)] border border-border/80 bg-background px-4 py-3 text-sm text-muted-foreground">
-                    <div className="flex items-start gap-3">
-                      <div className="flex size-9 shrink-0 items-center justify-center rounded-2xl border border-success/18 bg-success-soft text-success">
-                        <ShieldCheck className="size-4" />
-                      </div>
-                      <div className="space-y-1">
-                        <p className="font-semibold text-foreground">Starter workspace automation</p>
-                        <p>
-                          New organizations can be seeded with contacts, deals, messages,
-                          and tasks so the dashboard is meaningful from day one.
-                        </p>
-                      </div>
-                    </div>
                   </div>
                 </div>
               )}
-              </div>
             </SurfaceCard>
           </section>
         </div>

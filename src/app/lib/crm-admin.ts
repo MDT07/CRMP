@@ -75,8 +75,7 @@ export const roleLabels: Record<WorkspaceRole, string> = {
 };
 
 export function createId(prefix: string) {
-  const randomSeed =
-    globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2);
+  const randomSeed = globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2);
   return `${prefix}-${randomSeed.replace(/-/g, "").slice(0, 12)}`;
 }
 
@@ -85,8 +84,7 @@ export function maskApiKey(token: string) {
 }
 
 export function createApiToken() {
-  const randomSeed =
-    globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2);
+  const randomSeed = globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2);
   return `crmp_${randomSeed.replace(/-/g, "").slice(0, 28)}`;
 }
 
@@ -98,7 +96,9 @@ function createMaskedTokenPlaceholder(prefix: string) {
 function sanitizeApiKeyRecord(keyRecord: ApiKeyRecord): ApiKeyRecord {
   const maskedToken =
     keyRecord.maskedToken ||
-    (keyRecord.token ? maskApiKey(keyRecord.token) : createMaskedTokenPlaceholder(keyRecord.prefix));
+    (keyRecord.token
+      ? maskApiKey(keyRecord.token)
+      : createMaskedTokenPlaceholder(keyRecord.prefix));
 
   return {
     ...keyRecord,
@@ -115,7 +115,7 @@ function sanitizeAdminConsoleState(state: AdminConsoleState): AdminConsoleState 
 }
 
 export function getDefaultPermissionsForRole(
-  role: WorkspaceRole,
+  role: WorkspaceRole
 ): Record<PermissionModule, PermissionLevel> {
   switch (role) {
     case "admin":
@@ -158,7 +158,7 @@ export function getDefaultPermissionsForRole(
 }
 
 export function buildTeamMembersFromWorkspaceMembers(
-  members: WorkspaceMember[],
+  members: WorkspaceMember[]
 ): TeamMemberAccess[] {
   return members.map((member) => ({
     id: member.id,
@@ -172,9 +172,7 @@ export function buildTeamMembersFromWorkspaceMembers(
   }));
 }
 
-export function buildFallbackAdminConsoleState(
-  actorName = "EmirCo Operator",
-): AdminConsoleState {
+export function buildFallbackAdminConsoleState(actorName = "EmirCo Operator"): AdminConsoleState {
   const now = new Date();
   const serverSyncToken = createApiToken();
   const automationRunnerToken = createApiToken();
@@ -302,16 +300,13 @@ export function storeAdminConsoleState(state: AdminConsoleState) {
     return;
   }
 
-  window.localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify(sanitizeAdminConsoleState(state)),
-  );
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(sanitizeAdminConsoleState(state)));
 }
 
 export function createLocalInvite(
   _actorName: string,
   email: string,
-  role: WorkspaceRole,
+  role: WorkspaceRole
 ): TeamMemberAccess {
   const name = email.split("@")[0].replace(/[._-]+/g, " ");
   const displayName = name
@@ -334,7 +329,7 @@ export function createLocalInvite(
 
 export function buildApiKeyRecordFromWorkspaceApiKey(
   apiKey: WorkspaceApiKey,
-  token?: string | null,
+  token?: string | null
 ): ApiKeyRecord {
   return {
     id: apiKey.id,
@@ -355,7 +350,7 @@ export function createActivityLog(
   actor: string,
   action: string,
   target: string,
-  tone: ActivityLogRecord["tone"] = "info",
+  tone: ActivityLogRecord["tone"] = "info"
 ): ActivityLogRecord {
   return {
     id: createId("log"),

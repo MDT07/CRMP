@@ -1,27 +1,20 @@
-import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, CheckCircle2, FolderKanban, Plus } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-
+import { buildPageAssistantSelection } from "../../lib/assistant-hooks";
 import {
   convertDealToProject,
+  type Deal,
   fetchDeals,
   fetchProjects,
-  updateProject,
-  type Deal,
   type Project,
   type ProjectStatus,
+  updateProject,
 } from "../../lib/crm-api";
-import { buildPageAssistantSelection } from "../../lib/assistant-hooks";
 import { useCrmApp } from "../../providers/CrmProvider";
 import { PageHeader, SmartActionButton, StatusBadge, SurfaceCard } from "../crm-ui";
 
-const statusOrder: ProjectStatus[] = [
-  "planned",
-  "active",
-  "on_hold",
-  "completed",
-  "cancelled",
-];
+const statusOrder: ProjectStatus[] = ["planned", "active", "on_hold", "completed", "cancelled"];
 
 const statusTone: Record<ProjectStatus, "info" | "primary" | "warning" | "success" | "danger"> = {
   planned: "info",
@@ -56,16 +49,11 @@ function nextStatus(status: ProjectStatus) {
 }
 
 export function ProjectsPage() {
-  const {
-    clearAssistantSelection,
-    connection,
-    isGuest,
-    setAssistantSelection,
-  } = useCrmApp();
+  const { clearAssistantSelection, connection, isGuest, setAssistantSelection } = useCrmApp();
   const [projects, setProjects] = useState<Project[]>(fallbackProjects);
   const [deals, setDeals] = useState<Deal[]>([]);
   const [source, setSource] = useState<"loading" | "live" | "preview">(
-    connection === "loading" ? "loading" : "preview",
+    connection === "loading" ? "loading" : "preview"
   );
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -83,7 +71,7 @@ export function ProjectsPage() {
 
   const wonDeals = useMemo(
     () => deals.filter((deal) => deal.pipeline_stage === "closed_won"),
-    [deals],
+    [deals]
   );
   const unconvertedWonDeal = useMemo(() => {
     const converted = new Set(projects.map((project) => project.deal_id));
@@ -99,6 +87,7 @@ export function ProjectsPage() {
     setError(null);
   };
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: load function defined below
   useEffect(() => {
     if (connection === "loading") {
       setSource("loading");
@@ -112,7 +101,7 @@ export function ProjectsPage() {
       setError(
         connection === "fallback"
           ? "Backend connection is unavailable. Showing preview project workspace."
-          : "Guest mode keeps projects in preview.",
+          : "Guest mode keeps projects in preview."
       );
       return;
     }
@@ -150,7 +139,7 @@ export function ProjectsPage() {
           entity_id: project.id,
         })),
         summary: "Project delivery and deal conversion context",
-      }),
+      })
     );
 
     return () => {
@@ -197,7 +186,7 @@ export function ProjectsPage() {
 
     if (source !== "live") {
       setProjects((current) =>
-        current.map((item) => (item.id === project.id ? { ...item, status: next } : item)),
+        current.map((item) => (item.id === project.id ? { ...item, status: next } : item))
       );
       toast.info("Preview status changed", {
         description: `${project.name} moved to ${next}.`,
@@ -243,7 +232,8 @@ export function ProjectsPage() {
             items={[
               {
                 label: "Convert next won deal",
-                description: "Create a delivery project from the next available closed-won opportunity.",
+                description:
+                  "Create a delivery project from the next available closed-won opportunity.",
                 icon: FolderKanban,
                 onSelect: () => void handleConvertDeal(),
               },
@@ -286,13 +276,13 @@ export function ProjectsPage() {
 
               <div className="space-y-3 px-5 py-5">
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-2xl border border-border/70 bg-background/35 px-3 py-2">
+                  <div className="rounded-2xl border border-border/70 bg-background/35 px-3 py-2 transition-all duration-200 hover:border-primary/15 hover:shadow-sm">
                     <p className="text-xs text-muted-foreground">Kickoff</p>
                     <p className="text-sm font-medium text-foreground">
                       {project.kickoff_date || "Not set"}
                     </p>
                   </div>
-                  <div className="rounded-2xl border border-border/70 bg-background/35 px-3 py-2">
+                  <div className="rounded-2xl border border-border/70 bg-background/35 px-3 py-2 transition-all duration-200 hover:border-primary/15 hover:shadow-sm">
                     <p className="text-xs text-muted-foreground">Target End</p>
                     <p className="text-sm font-medium text-foreground">
                       {project.target_end_date || "Not set"}
@@ -300,7 +290,8 @@ export function ProjectsPage() {
                   </div>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  {project.notes || "No project notes yet. Add milestones, deliverables, and owner actions."}
+                  {project.notes ||
+                    "No project notes yet. Add milestones, deliverables, and owner actions."}
                 </p>
                 <div className="inline-flex items-center gap-2 rounded-full border border-success/18 bg-success-soft px-3 py-1.5 text-xs font-semibold text-success">
                   <CheckCircle2 className="size-3.5" />

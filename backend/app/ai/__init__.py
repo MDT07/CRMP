@@ -1,1 +1,1 @@
-"""AI helpers and provider integrations."""
+# AI module placeholder — removed for future integration

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { format, formatDistanceToNow, isToday, isYesterday } from "date-fns";
 import {
   Activity,
   Bot,
@@ -14,13 +14,13 @@ import {
   Tag,
   TrendingUp,
   User,
-  Zap,
   XCircle,
+  Zap,
 } from "lucide-react";
 import { motion } from "motion/react";
-import { format, formatDistanceToNow, isToday, isYesterday } from "date-fns";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-
+import { type EmailMessage, fetchEmailMessages } from "../lib/crm-api";
 import { Button } from "./ui/button";
 import {
   Dialog,
@@ -33,7 +33,6 @@ import {
 import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
 import { cn } from "./ui/utils";
-import { fetchEmailMessages, type EmailMessage } from "../lib/crm-api";
 
 // Types
 interface TimelineEvent {
@@ -182,7 +181,7 @@ const eventConfig: Record<
     icon: Bot,
     color: "text-primary",
     bgColor: "bg-primary",
-    label: "AI Insight",
+    label: "AgentP Insight",
   },
 };
 
@@ -292,7 +291,8 @@ function generateMockEvents(_entityId: string, _entityType: string): TimelineEve
       id: "12",
       type: "note",
       title: "Internal note added",
-      description: "Contact seems very interested. Mentioned urgency due to current tool limitations.",
+      description:
+        "Contact seems very interested. Mentioned urgency due to current tool limitations.",
       timestamp: new Date(now.getTime() - 12 * 24 * 60 * 60 * 1000),
       user: { name: "Sarah Johnson", avatar: "SJ" },
     },
@@ -317,8 +317,9 @@ function generateMockEvents(_entityId: string, _entityType: string): TimelineEve
     {
       id: "15",
       type: "ai_suggestion",
-      title: "AI Insight: High win probability",
-      description: "Based on engagement patterns and deal velocity, this deal has 85% likelihood to close",
+      title: "AgentP Insight: High win probability",
+      description:
+        "Based on engagement patterns and deal velocity, this deal has 85% likelihood to close",
       timestamp: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000),
       metadata: { confidence: 0.85, recommendedAction: "Schedule closing call" },
     },
@@ -351,7 +352,8 @@ function generateMockEvents(_entityId: string, _entityType: string): TimelineEve
       id: "19",
       type: "note",
       title: "Latest interaction",
-      description: "Contact confirmed receipt of revised contract. Expecting signature by EOD tomorrow.",
+      description:
+        "Contact confirmed receipt of revised contract. Expecting signature by EOD tomorrow.",
       timestamp: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000),
       user: { name: "Sarah Johnson", avatar: "SJ" },
     },
@@ -372,13 +374,7 @@ function formatTimestamp(date: Date): string {
 }
 
 // Timeline Event Component
-function TimelineEventCard({
-  event,
-  isLast,
-}: {
-  event: TimelineEvent;
-  isLast: boolean;
-}) {
+function TimelineEventCard({ event, isLast }: { event: TimelineEvent; isLast: boolean }) {
   const config = eventConfig[event.type];
   const Icon = config.icon;
 
@@ -390,9 +386,7 @@ function TimelineEventCard({
       className="relative flex gap-4"
     >
       {/* Timeline line */}
-      {!isLast && (
-        <div className="absolute left-[19px] top-10 bottom-0 w-px bg-border" />
-      )}
+      {!isLast && <div className="absolute left-[19px] top-10 bottom-0 w-px bg-border" />}
 
       {/* Icon */}
       <div
@@ -428,7 +422,9 @@ function TimelineEventCard({
                 <div className="flex size-7 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
                   {event.user.avatar || event.user.name.charAt(0)}
                 </div>
-                <span className="text-xs text-muted-foreground hidden sm:inline">{event.user.name}</span>
+                <span className="text-xs text-muted-foreground hidden sm:inline">
+                  {event.user.name}
+                </span>
               </div>
             )}
           </div>
@@ -477,28 +473,32 @@ export function Timeline({ entityId, entityType, className }: TimelineProps) {
   useEffect(() => {
     const fetchEvents = async () => {
       setIsLoading(true);
-      
+
       try {
         // Fetch mock events
         const mockEvents = generateMockEvents(entityId, entityType);
-        
+
         // Fetch real email events
         let emailEvents: TimelineEvent[] = [];
         try {
-          const emailParams: { contact_id?: string; deal_id?: string; limit: number } = { limit: 50 };
+          const emailParams: { contact_id?: string; deal_id?: string; limit: number } = {
+            limit: 50,
+          };
           if (entityType === "contact") {
             emailParams.contact_id = entityId;
           } else if (entityType === "deal") {
             emailParams.deal_id = entityId;
           }
-          
+
           const emailResponse = await fetchEmailMessages(emailParams);
           emailEvents = emailResponse.messages.map((email: EmailMessage) => ({
             id: email.id,
             type: "email" as TimelineEventType,
             title: email.subject || "(No subject)",
             description: email.snippet || email.body_text?.substring(0, 150) || "",
-            timestamp: new Date(email.received_at || email.sent_at || email.created_at || Date.now()),
+            timestamp: new Date(
+              email.received_at || email.sent_at || email.created_at || Date.now()
+            ),
             user: { name: email.from_name || email.from_email || "Unknown" },
             metadata: {
               from: email.from_email,
@@ -510,12 +510,12 @@ export function Timeline({ entityId, entityType, className }: TimelineProps) {
         } catch (emailError) {
           console.log("Could not fetch emails for timeline:", emailError);
         }
-        
+
         // Merge and sort events
         const allEvents = [...mockEvents, ...emailEvents].sort(
           (a, b) => b.timestamp.getTime() - a.timestamp.getTime()
         );
-        
+
         setEvents(allEvents);
       } catch (error) {
         console.error("Error fetching timeline events:", error);
@@ -548,9 +548,7 @@ export function Timeline({ entityId, entityType, className }: TimelineProps) {
       groups[dateKey].push(event);
     });
 
-    return Object.entries(groups).sort(
-      ([a], [b]) => new Date(b).getTime() - new Date(a).getTime()
-    );
+    return Object.entries(groups).sort(([a], [b]) => new Date(b).getTime() - new Date(a).getTime());
   }, [filteredEvents]);
 
   // Handle add note
@@ -623,6 +621,7 @@ export function Timeline({ entityId, entityType, className }: TimelineProps) {
       <div className="flex flex-wrap gap-2">
         {["all", "note", "email", "call", "meeting", "deal_stage_change"].map((type) => (
           <button
+            type="button"
             key={type}
             onClick={() => setFilter(type as TimelineEventType | "all")}
             className={cn(
@@ -659,8 +658,8 @@ export function Timeline({ entityId, entityType, className }: TimelineProps) {
                   {isToday(new Date(date))
                     ? "Today"
                     : isYesterday(new Date(date))
-                    ? "Yesterday"
-                    : format(new Date(date), "EEEE, MMMM d, yyyy")}
+                      ? "Yesterday"
+                      : format(new Date(date), "EEEE, MMMM d, yyyy")}
                 </span>
                 <div className="h-px flex-1 bg-border" />
               </div>
@@ -671,7 +670,10 @@ export function Timeline({ entityId, entityType, className }: TimelineProps) {
                   <TimelineEventCard
                     key={event.id}
                     event={event}
-                    isLast={index === dateEvents.length - 1 && date === groupedEvents[groupedEvents.length - 1][0]}
+                    isLast={
+                      index === dateEvents.length - 1 &&
+                      date === groupedEvents[groupedEvents.length - 1][0]
+                    }
                   />
                 ))}
               </div>
@@ -691,16 +693,22 @@ export function Timeline({ entityId, entityType, className }: TimelineProps) {
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <label className="text-sm font-medium">Title (optional)</label>
+              <label htmlFor="note-title" className="text-sm font-medium">
+                Title (optional)
+              </label>
               <Input
+                id="note-title"
                 value={newNoteTitle}
                 onChange={(e) => setNewNoteTitle(e.target.value)}
                 placeholder="Note title..."
               />
             </div>
             <div className="grid gap-2">
-              <label className="text-sm font-medium">Note</label>
+              <label htmlFor="note-body" className="text-sm font-medium">
+                Note
+              </label>
               <Textarea
+                id="note-body"
                 value={newNote}
                 onChange={(e) => setNewNote(e.target.value)}
                 placeholder="Enter your note..."

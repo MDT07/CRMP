@@ -15,11 +15,15 @@ def test_workspace_routes_are_registered() -> None:
     assert "/organizations/current/bootstrap" in route_paths
     assert "/organizations/current/api-keys" in route_paths
     assert "/organizations/current/api-keys/{api_key_id}/revoke" in route_paths
-    assert "/ai/status" in route_paths
-    assert "/ai/copilot" in route_paths
-    assert "/ai/project-intelligence" in route_paths
-    assert "/ai/project-intelligence/chat" in route_paths
-    assert "/ai/agent/run" in route_paths
-    assert "/ai/agent/runs" in route_paths
-    assert "/ai/agent/runs/{run_id}" in route_paths
-    assert "/ai/proposals/bulk-decision" in route_paths
+    assert "/health" in route_paths
+    assert "/auth/login" in route_paths
+    assert "/auth/register" in route_paths
+    assert "/companies/" in route_paths
+    assert "/contacts/" in route_paths
+    assert "/deals/" in route_paths
+    assert "/tasks/" in route_paths
+    assert "/projects/" in route_paths
+    assert "/messages/" in route_paths
+    assert "/email/accounts" in route_paths
+    assert "/automations/rules" in route_paths
+    assert "/analytics/dashboard" in route_paths

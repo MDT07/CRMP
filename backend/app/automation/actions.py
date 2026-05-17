@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
 
@@ -13,7 +13,6 @@ from app.models.event import Event
 from app.schemas.message import MessageCreate
 from app.schemas.task import TaskCreate
 from app.schemas.deal import DealUpdate
-from app.services.ai_service import AIService
 from app.services.task_service import TaskService
 from app.services.message_service import MessageService
 from app.services.deal_service import DealService
@@ -68,9 +67,6 @@ async def execute_action(
         elif action_type == "delay":
             results.update(await _delay_execution(action))
 
-        elif action_type == "refresh_deal_score":
-            results.update(await _refresh_deal_score(session, organization_id, event, action))
-
         elif action_type == "assign_task":
             results.update(await _assign_task(session, organization_id, event, action))
 
@@ -96,7 +92,7 @@ async def _create_follow_up_task(
 
     # Calculate due date
     due_days = action.get("due_days", 3)
-    due_at = datetime.utcnow() + timedelta(days=due_days)
+    due_at = datetime.now(timezone.utc) + timedelta(days=due_days)
 
     task_payload = TaskCreate(
         title=title,
@@ -130,7 +126,7 @@ async def _create_reminder_task(
     """Create a reminder task."""
     title = action.get("title", "Reminder")
     reminder_hours = action.get("reminder_hours", 24)
-    due_at = datetime.utcnow() + timedelta(hours=reminder_hours)
+    due_at = datetime.now(timezone.utc) + timedelta(hours=reminder_hours)
 
     task_payload = TaskCreate(
         title=f"🔔 {title}",
@@ -180,7 +176,7 @@ async def _send_email(
             "success": True,
             "to": to_email,
             "subject": subject,
-            "sent_at": datetime.utcnow().isoformat(),
+            "sent_at": datetime.now(timezone.utc).isoformat(),
         }
     except Exception as e:
         return {"success": False, "error": str(e)}
@@ -263,7 +259,6 @@ async def _update_deal_probability(
             organization_id=organization_id,
             deal_id=deal_id if isinstance(deal_id, UUID) else UUID(str(deal_id)),
             payload=deal_update,
-            emit_event=False,
             commit=False,
         )
 
@@ -368,7 +363,7 @@ async def _trigger_webhook(
         "success": True,
         "webhook_url": webhook_url,
         "event_type": event.event_type,
-        "triggered_at": datetime.utcnow().isoformat(),
+        "triggered_at": datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -381,31 +376,8 @@ async def _delay_execution(action: dict[str, Any]) -> dict[str, Any]:
     return {
         "success": True,
         "delay_seconds": delay_seconds,
-        "will_resume_at": (datetime.utcnow() + timedelta(seconds=delay_seconds)).isoformat(),
+        "will_resume_at": (datetime.now(timezone.utc) + timedelta(seconds=delay_seconds)).isoformat(),
     }
-
-
-async def _refresh_deal_score(
-    session: AsyncSession, organization_id: UUID, event: Event, action: dict[str, Any]
-) -> dict[str, Any]:
-    """Refresh AI deal score."""
-    deal_id = event.payload.get("deal_id")
-    if not deal_id:
-        return {"success": False, "error": "No deal_id in event"}
-
-    try:
-        await AIService(session).score_deal_from_event(
-            organization_id=organization_id,
-            deal_id=deal_id if isinstance(deal_id, UUID) else UUID(str(deal_id)),
-        )
-
-        return {
-            "success": True,
-            "deal_id": str(deal_id),
-            "score_refreshed": True,
-        }
-    except Exception as e:
-        return {"success": False, "error": str(e)}
 
 
 async def _assign_task(
@@ -427,8 +399,6 @@ async def _assign_task(
             organization_id=organization_id,
             task_id=task_id if isinstance(task_id, UUID) else UUID(str(task_id)),
             payload={"assignee_id": assignee_id},
-            emit_event=False,
-            commit=False,
         )
 
         return {
@@ -449,7 +419,7 @@ async def _schedule_meeting(
     duration_minutes = action.get("duration_minutes", 30)
 
     # Calculate suggested time
-    suggested_time = datetime.utcnow() + timedelta(days=1)
+    suggested_time = datetime.now(timezone.utc) + timedelta(days=1)
 
     # Create a task for the meeting
     task_payload = TaskCreate(
