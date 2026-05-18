@@ -1,4 +1,4 @@
-const CACHE_NAME = 'crmp-v1';
+const CACHE_NAME = 'crmp-v2';
 
 // Use relative paths for GitHub Pages compatibility
 const STATIC_ASSETS = [
